@@ -3,7 +3,7 @@ settings.php
 config.php
 roster/settings.php
 roster/config.php
-pdp/config.php
+personal-development-plan/config.php
 
 # Claude Code symlinks (linked from parent)
 .claude/agents
