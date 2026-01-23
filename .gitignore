@@ -1,0 +1,40 @@
+# Credentials - NEVER commit
+settings.php
+config.php
+roster/settings.php
+roster/config.php
+pdp/config.php
+
+# Claude Code symlinks (linked from parent)
+.claude/agents
+.claude/hooks
+.claude/skills
+.claude/settings.local.json
+
+# Composer dependencies
+vendor/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Build outputs
+dist/
+build/
+node_modules/
+
+# Planning docs
+QPLAN-*.md
