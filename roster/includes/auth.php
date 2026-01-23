@@ -6,4 +6,4 @@
  * All authentication functionality is now centralized in /shared/auth.php
  */
 
-require_once(__DIR__ . '/../../../shared/auth.php');
+require_once(__DIR__ . '/../../shared/auth.php');
