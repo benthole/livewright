@@ -3,35 +3,49 @@ require_once '../config.php';
 
 $error = '';
 
-if ($_POST) {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
-    
-    $stmt = $pdo->prepare("SELECT id, password_hash FROM admin_users WHERE username = ?");
-    $stmt->execute([$username]);
-    $admin = $stmt->fetch();
-    
-    if ($admin && password_verify($password, $admin['password_hash'])) {
-        $_SESSION['admin_logged_in'] = true;
-        $_SESSION['admin_id'] = $admin['id'];
-        header('Location: index.php');
-        exit;
+// If already logged in, redirect to admin
+if (is_logged_in()) {
+    header('Location: index.php');
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || !verify_csrf_token($_POST['csrf_token'])) {
+        $error = 'Invalid form submission. Please try again.';
     } else {
-        $error = 'Invalid credentials';
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+
+        if (empty($email) || empty($password)) {
+            $error = 'Please enter both email and password.';
+        } else {
+            $result = login($email, $password);
+
+            if ($result['success']) {
+                $redirect = $_SESSION['redirect_after_login'] ?? 'index.php';
+                unset($_SESSION['redirect_after_login']);
+                header('Location: ' . $redirect);
+                exit;
+            } else {
+                $error = $result['error'];
+            }
+        }
     }
 }
 ?>
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Admin Login</title>
+    <title>Admin Login - PDP</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 400px; margin: 100px auto; padding: 20px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 8px; }
+        input[type="email"], input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; }
         .btn { padding: 10px 20px; background: #007cba; color: white; border: none; cursor: pointer; }
-        .error { color: red; margin-bottom: 15px; }
+        .btn:hover { background: #005a87; }
+        .error { color: red; margin-bottom: 15px; padding: 10px; background: #ffe0e0; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -39,11 +53,12 @@ if ($_POST) {
     <?php if ($error): ?>
         <div class="error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
-    
+
     <form method="POST">
+        <?= csrf_field() ?>
         <div class="form-group">
-            <label>Username:</label>
-            <input type="text" name="username" required>
+            <label>Email:</label>
+            <input type="email" name="email" required autofocus>
         </div>
         <div class="form-group">
             <label>Password:</label>
@@ -51,7 +66,5 @@ if ($_POST) {
         </div>
         <button type="submit" class="btn">Login</button>
     </form>
-    
-    <p><small>Default: admin / admin123</small></p>
 </body>
 </html>
