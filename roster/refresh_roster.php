@@ -11,8 +11,8 @@ if (!is_logged_in()) {
     exit;
 }
 
-// Set longer execution time for API sync
-set_time_limit(120);
+// Set longer execution time for API sync (may be disabled on some hosts)
+@set_time_limit(120);
 
 // Run the search/sync process
 require_once('keap_api.php');
