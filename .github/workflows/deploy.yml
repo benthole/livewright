@@ -16,7 +16,7 @@ jobs:
       - name: Deploy via rsync
         uses: burnett01/rsync-deployments@7.0.1
         with:
-          switches: -avzr --delete --exclude='.git' --exclude='.github' --exclude='.env' --exclude='CLAUDE.md'
+          switches: -avzr --delete --exclude='.git' --exclude='.github' --exclude='.env' --exclude='CLAUDE.md' --exclude='config.php' --exclude='settings.php'
           path: ./
           remote_path: ${{ secrets.SSH_PATH }}/
           remote_host: ${{ secrets.SSH_HOST }}
