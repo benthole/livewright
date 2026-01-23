@@ -172,6 +172,126 @@ if (empty($uid)) {
         .continue-btn:disabled { background: #6c757d; cursor: not-allowed; }
         .selected-option { background: #d4edda; padding: 15px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #28a745; }
         .error-message { color: #dc3545; font-size: 14px; margin-top: 5px; }
+
+        /* Floating Cart Button */
+        .floating-cart {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        .floating-cart:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.5);
+        }
+        .floating-cart .cart-icon { font-size: 20px; }
+        .floating-cart .cart-count {
+            background: white;
+            color: #28a745;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .floating-cart .cart-total { margin-left: 5px; }
+
+        /* Cart Panel */
+        .cart-panel {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            width: 350px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 999;
+            display: none;
+        }
+        .cart-panel.open { display: block; }
+        .cart-panel-header {
+            background: #007cba;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px 12px 0 0;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cart-panel-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .cart-panel-content { padding: 20px; }
+        .cart-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .cart-item:last-child { border-bottom: none; }
+        .cart-item-name { font-weight: bold; color: #333; margin-bottom: 5px; }
+        .cart-item-price { color: #28a745; font-weight: bold; }
+        .cart-item-type { color: #666; font-size: 0.9em; }
+        .cart-item-remove {
+            color: #dc3545;
+            cursor: pointer;
+            font-size: 0.85em;
+            float: right;
+        }
+        .cart-item-remove:hover { text-decoration: underline; }
+        .cart-total-row {
+            padding: 15px 0;
+            border-top: 2px solid #007cba;
+            margin-top: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        .cart-total-row .total-price { color: #28a745; font-size: 1.2em; }
+        .cart-checkout-btn {
+            width: 100%;
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .cart-checkout-btn:hover { background: #218838; }
+
+        /* Remove default highlighting once user selects */
+        .pricing-tier.recommended.user-selected-elsewhere {
+            border-color: #ddd;
+            background: white;
+            border-width: 1px;
+        }
+        .pricing-tier.recommended.user-selected-elsewhere:hover {
+            border-color: #007cba;
+        }
     </style>
 </head>
 <body>
@@ -469,45 +589,168 @@ if (empty($uid)) {
         </div>
     </div>
 
+    <!-- Floating Cart Button -->
+    <button class="floating-cart" id="floatingCart" onclick="toggleCartPanel()">
+        <span class="cart-icon">🛒</span>
+        <span class="cart-count" id="cartCount">0</span>
+        <span class="cart-total" id="cartTotalDisplay">$0.00</span>
+    </button>
+
+    <!-- Cart Panel -->
+    <div class="cart-panel" id="cartPanel">
+        <div class="cart-panel-header">
+            <span>Your Selections</span>
+            <button class="cart-panel-close" onclick="toggleCartPanel()">×</button>
+        </div>
+        <div class="cart-panel-content" id="cartPanelContent">
+            <!-- Cart items will be populated here -->
+        </div>
+    </div>
+
     <script>
     let selectedOptionId = null;
-    
+    let selectedOption = null;
+    let selectedAddOns = [];
+    let cartPanelOpen = false;
+
     function selectOption(optionId, optionName, description, price, type, subOptionName) {
-        // Remove previous selection
+        // Remove previous selection styling
         document.querySelectorAll('.pricing-tier').forEach(tier => {
             tier.classList.remove('selected');
+            // Add class to dim default recommended items
+            if (tier.classList.contains('recommended')) {
+                tier.classList.add('user-selected-elsewhere');
+            }
         });
-        
+
         // Add selection to clicked tier
         event.currentTarget.classList.add('selected');
-        
+        // Remove the dimming class from the selected item
+        event.currentTarget.classList.remove('user-selected-elsewhere');
+
         // Store selection
         selectedOptionId = optionId;
         document.getElementById('payment_option').value = optionId;
-        
-        // Update title to "Your Selection:"
-        document.getElementById('form-title').textContent = 'Your Selection:';
-        
-        // Update display with sub-option name if applicable
+
+        // Build display name
         let displayName = optionName;
         if (subOptionName && subOptionName !== 'Default') {
             displayName += ` - ${subOptionName}`;
         }
-        
+
+        // Store the selected option details
+        selectedOption = {
+            id: optionId,
+            name: displayName,
+            price: parseFloat(price),
+            type: type
+        };
+
+        // Update title to "Your Selection:"
+        document.getElementById('form-title').textContent = 'Your Selection:';
+
         document.getElementById('selected-option-name').textContent = displayName;
         document.getElementById('selected-price').textContent = parseFloat(price).toFixed(2);
         document.getElementById('selected-type').textContent = type.toLowerCase();
-        
+
         // Show selected option display
         document.getElementById('selected-option-display').style.display = 'block';
-        
+
         // Enable continue button
         document.getElementById('continue-btn').disabled = false;
-        
+
         // Hide error message
         document.getElementById('selection-error').style.display = 'none';
+
+        // Update cart
+        updateCart();
     }
-    
+
+    function updateCart() {
+        let itemCount = 0;
+        let total = 0;
+        let cartHTML = '';
+
+        // Add main program if selected
+        if (selectedOption) {
+            itemCount++;
+            total += selectedOption.price;
+            cartHTML += `
+                <div class="cart-item">
+                    <div class="cart-item-name">${selectedOption.name}</div>
+                    <div class="cart-item-price">$${selectedOption.price.toFixed(2)} <span class="cart-item-type">${selectedOption.type.toLowerCase()}</span></div>
+                </div>
+            `;
+        }
+
+        // Add add-ons
+        selectedAddOns.forEach((addon, index) => {
+            itemCount++;
+            total += addon.price;
+            cartHTML += `
+                <div class="cart-item">
+                    <span class="cart-item-remove" onclick="removeAddOn(${index})">Remove</span>
+                    <div class="cart-item-name">${addon.name}</div>
+                    <div class="cart-item-price">$${addon.price.toFixed(2)}</div>
+                </div>
+            `;
+        });
+
+        // Show/hide floating cart
+        const floatingCart = document.getElementById('floatingCart');
+        if (itemCount > 0) {
+            floatingCart.style.display = 'flex';
+            document.getElementById('cartCount').textContent = itemCount;
+            document.getElementById('cartTotalDisplay').textContent = '$' + total.toFixed(2);
+        } else {
+            floatingCart.style.display = 'none';
+            closeCartPanel();
+        }
+
+        // Update cart panel content
+        if (cartHTML) {
+            cartHTML += `
+                <div class="cart-total-row">
+                    <span>Total:</span>
+                    <span class="total-price">$${total.toFixed(2)}</span>
+                </div>
+                <button class="cart-checkout-btn" onclick="scrollToCheckout()">Continue to Checkout</button>
+            `;
+        } else {
+            cartHTML = '<p style="text-align: center; color: #666;">No items selected yet</p>';
+        }
+
+        document.getElementById('cartPanelContent').innerHTML = cartHTML;
+    }
+
+    function toggleCartPanel() {
+        const panel = document.getElementById('cartPanel');
+        cartPanelOpen = !cartPanelOpen;
+        panel.classList.toggle('open', cartPanelOpen);
+    }
+
+    function closeCartPanel() {
+        const panel = document.getElementById('cartPanel');
+        cartPanelOpen = false;
+        panel.classList.remove('open');
+    }
+
+    function scrollToCheckout() {
+        closeCartPanel();
+        document.querySelector('.selection-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function removeAddOn(index) {
+        // Uncheck the corresponding checkbox
+        const addonName = selectedAddOns[index].name;
+        const checkbox = document.querySelector(`input[name="support_packages[]"][value="${addonName}"]`);
+        if (checkbox) {
+            checkbox.checked = false;
+        }
+        selectedAddOns.splice(index, 1);
+        updateCart();
+    }
+
     function validateForm() {
         if (!selectedOptionId) {
             document.getElementById('selection-error').style.display = 'block';
@@ -515,6 +758,24 @@ if (empty($uid)) {
         }
         return true;
     }
+
+    // Initialize add-on checkboxes
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('input[name="support_packages[]"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const name = this.value;
+                const price = parseFloat(this.dataset.price);
+
+                if (this.checked) {
+                    selectedAddOns.push({ name, price });
+                } else {
+                    selectedAddOns = selectedAddOns.filter(a => a.name !== name);
+                }
+                updateCart();
+            });
+        });
+    });
     </script>
 </body>
 </html>
