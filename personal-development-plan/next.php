@@ -297,73 +297,143 @@ if ($_POST && isset($_POST['confirm_purchase']) && !$error) {
             </div>
             <div class="modal-body">
                 <h3>Operating Agreements</h3>
-                <p>The following operating agreements will help you get the most out of your participation in the program and enhance the quality of your life in all areas. Choosing to participate in the training means choosing to follow these agreements; those who choose not to will be informed of the problem, and continued failure to follow the agreements will lead to dismissal from the training.</p>
+                <p>Welcome! These agreements are here to help you get the most out of your experience in this program and support your growth in every area of your life. By joining this program, you're agreeing to honor these guidelines. If someone is not able to follow them, we'll address it together — and ongoing issues may lead to being asked to leave the program.</p>
+                <p><strong>Here's what we're asking of you:</strong></p>
 
-                <h4>The agreements are as follows:</h4>
-                <ul>
-                    <li><strong>Have fun, participate and engage fully, and stay curious.</strong></li>
-                    <li><strong>Create value for yourself.</strong> Those who benefit the most in workshop learning don't wait for information to come to them. They participate and generate meaning and value for themselves. The more you can accept this responsibility to create value for yourself, the more you will find creative ways to contribute, participate, and benefit.</li>
-                    <li><strong>Create value for the training and do not detract.</strong> Use your participation to move the group or training forward and not detract or delay it in any way.</li>
-                    <li><strong>Participate fully.</strong> The more you invest and participate in the training, the more you will benefit. Research has shown that those who participate the most get the most out of their experience. Full participation also means that you will be fully engaged with your camera on through the duration of the training.</li>
-                    <li><strong>Do your best in every way possible.</strong></li>
-                    <li><strong>Be in the here and now.</strong> You are here to explore your experience in the here and now and ways to live more presently in the moment, and you agree to accept coaching.</li>
-                    <li><strong>Be on time.</strong> You and others have invested significant resources to participate in this training. To make your work together the most productive, it is critical that you show up on time and ready to work.</li>
-                    <li><strong>Take responsibility for your own experience, especially charges and reactions.</strong> Any time an issue arises or you have a charge or reaction, you agree you will immediately identify the feeling underneath and take responsibility for yourself, your pain, or your issue.</li>
-                    <li><strong>No side conversations.</strong> Your team's success depends on everyone paying attention and supporting the group unity.</li>
-                    <li><strong>Do not give advice or disagree.</strong> Giving advice prevents fellow participants from accessing their own innate wisdom, deep yearnings, and feelings on a given topic or assignment.</li>
-                    <li><strong>Have a beginner's mind.</strong> The best coaches and teachers are those who are always learning and are deepening their insights and learning in new ways.</li>
-                    <li><strong>Speak about your own experience. No generalizations.</strong> While it is often easier to talk about how the experience or training relates to someone you know, you'll get the most benefit when you talk about how your insight or learning applies to you.</li>
-                    <li><strong>Tell the truth.</strong> You can always decline to share information about yourself. However, a training experience is a great opportunity to take risks, be more open and honest, and disclose more about yourself.</li>
-                    <li><strong>Be curious and honest about what you do and do not understand.</strong></li>
-                    <li><strong>Be as selfish as possible.</strong> The more you want, the more you will invest, and the more you invest, the more you will get out of this experience.</li>
-                    <li><strong>Be coachable and open-minded.</strong> Be coachable and be open to having your opinion shifted and changed.</li>
-                    <li><strong>Keep confidentiality.</strong> We maintain an environment of integrity, safety, and freedom to participate by upholding confidentiality. Students do not disclose the content of other students' work.</li>
-                    <li><strong>No business transactions.</strong> We ask that participants refrain from conducting business transactions with each other during the training. Referrals and networking are okay.</li>
-                    <li><strong>Be fully conscious, fully available, and fully engaged by refraining from mood-altering substances.</strong> Participants agree to refrain from mood-altering drugs or substances 24 hours ahead and during the training.</li>
-                    <li><strong>No Recording.</strong> By participating, you agree not to record the screen/video or sound/audio from the training.</li>
-                    <li><strong>No broadcasting to non-registered participants.</strong> Everyone who is participating must be registered, have signed these agreements, and must participate from their own device.</li>
-                </ul>
+                <h4>Show Up Fully</h4>
+                <p>Be present, engaged, and ready to participate. Keep your camera on (unless it's briefly off to avoid distraction). Give it your best effort — the more you put in, the more you'll take away.</p>
 
-                <h4>The Seven Rules of Engagement</h4>
-                <ul>
-                    <li><strong>Rule #1: Accentuate the positive.</strong> Focus on what is good, exciting, novel, and what works.</li>
-                    <li><strong>Rule #2: Minimize the negative.</strong> Eliminate passive-destructive behaviors like avoiding, stonewalling, withholding, keeping secrets, or zoning out.</li>
-                    <li><strong>Rule #3: No one gets more than 50 percent of the blame.</strong> When you find yourself assigning blame, remember that no matter who instigates a conflict, you are part of a system.</li>
-                    <li><strong>Rule #4: Take 100 percent responsibility for your happiness and satisfaction.</strong> It is not the responsibility of the program, your group, your leaders, your coach, or anyone else in your life to make you happy.</li>
-                    <li><strong>Rule #5: Express and agree with the truth, always.</strong> In any disagreement, verbally acknowledge when someone says something that is true or when you are wrong.</li>
-                    <li><strong>Rule #6: Fight for, not against.</strong> When someone says or does something that is irritating or challenging, fight for something rather than just asserting your perspective.</li>
-                    <li><strong>Rule #7: Assume goodwill.</strong> Look for the positive intent in any relationship or interaction, rather than scanning for what others are doing wrong.</li>
-                </ul>
+                <h4>Be Curious and Create Your Own Value</h4>
+                <p>The biggest growth happens when you take initiative. Don't wait for answers — ask questions, explore, and stay curious. You're responsible for your own experience. This is your time.</p>
+
+                <h4>Contribute to the Group</h4>
+                <p>If you engage in group services, use your voice and energy to support the program and your fellow participants. Avoid anything that takes energy away from the group's progress.</p>
+
+                <h4>Be On Time</h4>
+                <p>Please note if being on time is an issue for you and use lateness as an opportunity to examine the issues, learn, and grow. In groups, everyone's time and investment matter. Let's respect each other by starting and ending on time.</p>
+
+                <h4>Take Ownership of Your Reactions</h4>
+                <p>If something stirs up emotion, pause and check in with yourself. Notice what you're feeling and take responsibility for your experience. Reach out to a coach, leader, or assistant if you need support.</p>
+
+                <h4>No Side Conversations</h4>
+                <p>Keep your attention on the group and the moment. Private chats or discussions outside the group setting take away from the shared experience.</p>
+
+                <h4>No Advice or Disagreeing</h4>
+                <p>Instead of giving advice, ask open questions. Instead of saying "I disagree," try "Can you help me understand what you mean?" We grow more by staying curious than by trying to be right.</p>
+
+                <h4>Keep a Beginner's Mind</h4>
+                <p>No matter how much you know, come with a fresh perspective. This space isn't about teaching others — it's about exploring your own learning edge.</p>
+
+                <h4>Speak From Your Own Experience</h4>
+                <p>Share your own story, your own insights. Avoid generalizations or talking about other people.</p>
+
+                <h4>Tell the Truth</h4>
+                <p>You're always welcome to pass, but we invite you to be open and honest. The more real you are, the more powerful your experience will be.</p>
+
+                <h4>Ask When You Don't Understand</h4>
+                <p>If something doesn't make sense, ask. Curiosity opens the door to insight. Keep an open heart and mind.</p>
+
+                <h4>Be Self-Focused</h4>
+                <p>Your greatest contribution to others is not your knowledge but your example of learning and growing. The more you make this about you, the more growth you'll experience. Dive in. Apply the tools. Use this space for your own breakthroughs.</p>
+
+                <h4>Be Coachable</h4>
+                <p>Stay open to feedback and new perspectives. You don't need to agree — just be open to trying something different. Note feelings underneath tendencies to agree or disagree — neither position is conducive to learning and growing.</p>
+
+                <h4>Keep It Confidential</h4>
+                <p>What's shared in the group stays in the group. Talk about your own experience, not others'.</p>
+
+                <h4>No Business Deals</h4>
+                <p>Keep leaders appraised of any business or financial dealing so all can be aware of non-growth-oriented dynamics. Please don't initiate business or money-related conversations with fellow participants during the program. Referrals and existing relationships are fine — just save business for after the program.</p>
+
+                <h4>Stay Substance-Free</h4>
+                <p>To be fully present, avoid alcohol and mood-altering substances for 24 hours before and during the training.</p>
+
+                <h4>No Recording</h4>
+                <p>Don't record the program in any way. If you want to share a group photo, please ask for permission first.</p>
+
+                <h4>One Person Per Screen</h4>
+                <p>Except in obvious situations like couples' or family training and coaching, everyone must be registered and participating on their own device, in a private space if possible. Use headphones if others are nearby.</p>
+
+                <p style="margin-top: 20px; font-style: italic;">These agreements are here to create a respectful, powerful, and growth-centered environment for everyone involved. Thank you for honoring them — and for showing up for yourself and the group.</p>
 
                 <h3>Service Agreement</h3>
-                <p>This agreement is made between LiveWright, LLC, N7698 County Road H, Elkhorn, Wisconsin 53121 ("LiveWright" or "Consultant") and You ("Client").</p>
 
-                <h4>A. Services</h4>
-                <p>The Coaching and Consulting services shall be performed for the Client as indicated in the selected plan.</p>
+                <h4>Purpose</h4>
+                <p>The Client is engaging LiveWright, LLC to provide coaching and consulting services, as outlined below. Both parties agree to the following terms of this services agreement and the operating agreement below for engagement in coaching and group services:</p>
 
-                <h4>B. Term</h4>
-                <p>This Agreement shall commence on the date of signing and shall continue until the Consultant has delivered services and services are deemed complete by client and/or Consultant with 30 days' notice.</p>
+                <h4>A. Scope of Services</h4>
+                <p>LiveWright will provide coaching and consulting services to the Client as requested and agreed upon. All acknowledge that this service is educational and developmental and is not psychotherapy or any licensed medical service. It's not a substitute for therapy, doesn't treat mental health conditions, and isn't meant to diagnose or cure any medical issues.</p>
+
+                <h4>B. Duration</h4>
+                <p>This agreement begins on the date above and will continue until services are completed, extended, or either party gives 30 days' written notice.</p>
 
                 <h4>C. Governing Law</h4>
-                <p>This Agreement shall be governed by and construed according to the internal laws of the State of Wisconsin. Any action or proceeding shall be brought in the courts in the State of Wisconsin.</p>
+                <p>This agreement is governed by the laws of the State of Wisconsin.</p>
 
-                <h4>D. Confidentiality</h4>
-                <p>Each party agrees that any confidential information disclosed shall not be disclosed to any other party or used by the receiving party for its own benefit except as contemplated by this Agreement.</p>
+                <h4>D. Communications & Notices</h4>
+                <p>All official communications must be in writing and sent to the addresses listed above via mail, overnight courier, or electronic transmission. Notices are considered received upon delivery.</p>
 
-                <h4>E. Warranties</h4>
-                <p>LiveWright warrants that services shall: (a) be performed in a professional and workmanlike manner; (b) comply with applicable law; and (c) not violate or infringe upon intellectual property rights of a third party.</p>
+                <h4>E. Ownership</h4>
+                <p>All materials developed for the Client are for the Client's personal use and ownership remains with the developer unless otherwise agreed in writing.</p>
 
-                <h4>F. Termination</h4>
-                <p>Either party may terminate this Agreement without cause upon giving the other party thirty (30) days prior written notice. Either party may terminate for a material breach upon giving fifteen (15) days prior written notice, provided that the breaching party does not cure such breach within the notice period.</p>
+                <h4>F. Confidentiality</h4>
+                <p>Both parties agree to keep each other's confidential information private and only use it as needed for the services provided. Confidential information will be protected and returned or destroyed after the project or upon request.</p>
 
-                <h4>G. Arbitration</h4>
-                <p>Any controversy arising under this Agreement shall be determined and settled by arbitration in the metropolitan area of Milwaukee, Wisconsin, in accordance with the rules of the American Arbitration Association.</p>
+                <h4>G. Use of Shared Ideas</h4>
+                <p>Information already public, independently developed, or lawfully received from others is not restricted. If either party receives a legal request for confidential information, they will notify the other party before complying.</p>
 
-                <h4>H. Independent Contractor</h4>
-                <p>LiveWright is an independent contractor, and no party shall have the authority to bind, represent or commit to the other. Nothing in this Agreement shall be deemed to create a joint venture, partnership, or agency relationship.</p>
+                <h4>H. Client Reference</h4>
+                <p>Client agrees that LiveWright may mention the Client's name and a general description of services in promotional materials or reference lists.</p>
 
-                <h4>I. Payment</h4>
-                <p>Total cost as agreed upon in the selected plan. Travel expenses are not included and will be billed separately. This Contract covers services rendered during the 365-day period commencing when LiveWright receives your signed contract.</p>
+                <h4>I. Use of General Knowledge</h4>
+                <p>LiveWright is free to use skills, knowledge, and general methods developed during this engagement for other clients, as long as confidential information is not shared.</p>
+
+                <h4>J. Warranties</h4>
+                <p>LiveWright commits to performing services professionally and lawfully. If the services do not meet expectations within 30 days of completion, LiveWright will make reasonable efforts to resolve the issue. If that's not possible, the Client may cancel the agreement and receive a refund for any non-compliant work. The Client confirms they have the right to use all materials provided to LiveWright and that these materials do not violate any laws or third-party rights.</p>
+
+                <h4>K. Team Members & Hiring</h4>
+                <p>LiveWright's team may work with other clients. The Client agrees not to hire or recruit LiveWright team members during the project or within one year after, without prior agreement. If this happens, a fee of $75,000 applies unless otherwise negotiated.</p>
+
+                <h4>L. Disputes</h4>
+                <p>Any disagreements will be resolved through arbitration in Milwaukee, Wisconsin under the rules of the American Arbitration Association. Decisions will be final and enforceable by law.</p>
+
+                <h4>M. Ending the Agreement</h4>
+                <p>Either party can end this agreement with 30 days' written notice. If there's a serious issue (like non-payment or breach of contract), the agreement can be ended with 15 days' notice if the issue isn't resolved. If either party becomes unable to continue due to insolvency or similar reasons, the agreement may be ended immediately. Upon ending, the Client agrees to pay for all services delivered up to that point.</p>
+
+                <h4>N. Force Majeure</h4>
+                <p>Neither party is responsible for delays due to uncontrollable events (e.g., natural disasters, emergencies), except for payment obligations.</p>
+
+                <h4>O. Legal Jurisdiction</h4>
+                <p>This agreement falls under Wisconsin law, and any legal matters will be resolved in Walworth County, Wisconsin.</p>
+
+                <h4>P. Notices</h4>
+                <p>All notices must be in writing and are considered received when delivered in person, by mail, courier, or fax.</p>
+
+                <h4>Q. Independent Contractor</h4>
+                <p>LiveWright is an independent contractor, not an employee. Nothing in this agreement creates a joint venture, partnership, or employment relationship.</p>
+
+                <h4>R. Insurance</h4>
+                <p>Any legal claim related to this agreement must be filed within one year of the services being completed. The Client is also responsible for any collection costs if fees remain unpaid and legal action is required.</p>
+
+                <h4>T. Ongoing Obligations</h4>
+                <p>Any part of this agreement that logically continues after termination (like confidentiality, ownership, and warranties) will remain in effect.</p>
+
+                <h4>U. Authority to Sign</h4>
+                <p>This agreement becomes valid once signed by an authorized representative of LiveWright, LLC.</p>
+
+                <h4>V. Payment</h4>
+                <p>Payment terms are as agreed. Travel and additional services not covered here will be billed separately. This agreement covers the period of current program participation and subsequent services from the date it's signed.</p>
+
+                <h4>W. Cancellation Policy</h4>
+                <p>Client agrees that it is the Client's responsibility to notify the Coach of any requests to cancel or reschedule any appointment at least 24 hours in advance of the scheduled calls/meetings. Coach reserves the right to bill Client for a missed or late-canceled meeting, or to deduct the session from the Client's package. Coach will attempt in good faith to reschedule the missed meeting.</p>
+
+                <h4>X. No Guarantees and Limited Liability</h4>
+                <p>Except as expressly provided in this Agreement, the Coach makes no guarantees, representations or warranties of any kind or nature, express or implied with respect to the coaching services negotiated, agreed upon and rendered. In no event shall the Coach be liable to the Client for any indirect, consequential or special damages. Notwithstanding any damages that the Client may incur, the Coach's entire liability under this Agreement, and the Client's exclusive remedy, shall be limited to the amount actually paid by the Client to the Coach under this Agreement for all coaching services.</p>
+
+                <h4>Y. Binding Effect</h4>
+                <p>This Agreement shall be binding upon the parties hereto and their respective successors and permissible assigns.</p>
+
+                <p style="margin-top: 20px;"><strong>By signing, Client agrees to the terms above.</strong></p>
             </div>
             <div class="modal-footer">
                 <button onclick="closeTermsModal()">I Have Read the Terms</button>
