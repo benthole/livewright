@@ -148,47 +148,13 @@ for ($i = 1; $i <= 3; $i++) {
         }
     }
 }
+
+$page_title = ($preset_id ? 'Edit' : 'Add New') . ' Preset';
+$page_head = '<link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">';
+require_once 'includes/header.php';
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <title><?= $preset_id ? 'Edit' : 'Add New' ?> Preset</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; max-width: 900px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="email"], input[type="number"] { 
-            width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;
-        }
-        .btn { padding: 10px 20px; background: #007cba; color: white; border: none; cursor: pointer; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; }
-        .btn-secondary { background: #6c757d; }
-        .error { color: red; margin-bottom: 15px; }
-        .success { color: green; margin-bottom: 15px; font-weight: bold; }
-        .option-section { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
-        .sub-option-section { border: 1px solid #eee; margin: 15px 0; padding: 15px; background: #fafafa; border-radius: 4px; }
-        .sub-option-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .sub-option-name { width: 300px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-        .remove-sub-option { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .add-sub-option { background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
-        .pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px; }
-        .pricing-column { text-align: center; }
-        .pricing-column h4 { margin: 0 0 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; transition: all 0.3s ease; }
-        .pricing-column h4.has-price { background: #28a745; color: white; }
-        .pricing-column input { text-align: center; }
-        .pricing-column small { display: block; color: #666; font-size: 0.85em; margin-top: 5px; font-style: italic; }
-        .auto-calculated { background-color: #e8f5e9; cursor: not-allowed; }
-        .base-price-badge { background: #007cba; color: white; font-size: 0.7em; padding: 2px 6px; border-radius: 8px; margin-left: 5px; vertical-align: middle; }
-        h3 { margin-top: 0; }
-        .quill-editor { height: 120px; }
-        .ql-toolbar { border-top: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }
-        .ql-container { border-bottom: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }
-        .description-group { margin-bottom: 15px; }
-        .hidden { display: none; }
-        .pricing-note { font-size: 0.9em; color: #666; margin-top: 10px; font-style: italic; }
-    </style>
-</head>
-<body>
+
+    <div class="admin-content narrow">
     <h1><?= $preset_id ? 'Edit' : 'Add New' ?> Preset</h1>
     
     <?php if ($success): ?>
@@ -513,5 +479,6 @@ for ($i = 1; $i <= 3; $i++) {
         }
     });
     </script>
-</body>
-</html>
+    </div>
+
+<?php require_once 'includes/footer.php'; ?>

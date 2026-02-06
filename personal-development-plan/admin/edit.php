@@ -143,6 +143,11 @@ if ($_POST) {
                         }
                     }
                     
+                    // Get payment config for this option
+                    $opt_deposit = trim($_POST["option_{$i}_deposit_amount"] ?? '');
+                    $opt_deposit = (!empty($opt_deposit) && is_numeric($opt_deposit)) ? (float)$opt_deposit : null;
+                    $opt_payment_mode = $_POST["option_{$i}_payment_mode"] ?? 'recurring_immediate';
+
                     if ($has_sub_options) {
                         // Create entries for each sub-option
                         for ($s = 1; $s <= 10; $s++) {
@@ -152,8 +157,8 @@ if ($_POST) {
                                 foreach ($types as $type) {
                                     $price = trim($_POST["option_{$i}_sub_{$s}_price_" . strtolower($type)] ?? '');
                                     if (!empty($price) && is_numeric($price)) {
-                                        $stmt = $pdo->prepare("INSERT INTO pricing_options (contract_id, option_number, sub_option_name, description, price, type) VALUES (?, ?, ?, ?, ?, ?)");
-                                        $stmt->execute([$contract_id, $i, $sub_name, $main_desc, $price, $type]);
+                                        $stmt = $pdo->prepare("INSERT INTO pricing_options (contract_id, option_number, sub_option_name, description, price, deposit_amount, payment_mode, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                                        $stmt->execute([$contract_id, $i, $sub_name, $main_desc, $price, $opt_deposit, $opt_payment_mode, $type]);
                                     }
                                 }
                             }
@@ -164,8 +169,8 @@ if ($_POST) {
                         foreach ($types as $type) {
                             $price = trim($_POST["option_{$i}_price_" . strtolower($type)] ?? '');
                             if (!empty($price) && is_numeric($price)) {
-                                $stmt = $pdo->prepare("INSERT INTO pricing_options (contract_id, option_number, sub_option_name, description, price, type) VALUES (?, ?, ?, ?, ?, ?)");
-                                $stmt->execute([$contract_id, $i, 'Default', $main_desc, $price, $type]);
+                                $stmt = $pdo->prepare("INSERT INTO pricing_options (contract_id, option_number, sub_option_name, description, price, deposit_amount, payment_mode, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                                $stmt->execute([$contract_id, $i, 'Default', $main_desc, $price, $opt_deposit, $opt_payment_mode, $type]);
                             }
                         }
                     }
@@ -235,15 +240,19 @@ for ($i = 1; $i <= 3; $i++) {
         'desc' => $_POST["option_{$i}_desc"] ?? '',
         'monthly' => $_POST["option_{$i}_price_monthly"] ?? '',
         'quarterly' => $_POST["option_{$i}_price_quarterly"] ?? '',
-        'yearly' => $_POST["option_{$i}_price_yearly"] ?? ''
+        'yearly' => $_POST["option_{$i}_price_yearly"] ?? '',
+        'deposit_amount' => $_POST["option_{$i}_deposit_amount"] ?? '',
+        'payment_mode' => $_POST["option_{$i}_payment_mode"] ?? 'recurring_immediate',
     ];
-    
+
     // Load from existing contract if editing
     if (empty($form_options[$i]['desc']) && !empty($options[$i])) {
         $first_sub_option = reset($options[$i]);
         $first_option = reset($first_sub_option);
         $form_options[$i]['desc'] = $first_option['description'] ?? '';
-        
+        $form_options[$i]['deposit_amount'] = $first_option['deposit_amount'] ?? '';
+        $form_options[$i]['payment_mode'] = $first_option['payment_mode'] ?? 'recurring_immediate';
+
         // If only one sub-option named 'Default', load simple pricing
         if (count($options[$i]) === 1 && isset($options[$i]['Default'])) {
             $form_options[$i]['monthly'] = $options[$i]['Default']['Monthly']['price'] ?? '';
@@ -289,107 +298,13 @@ for ($i = 1; $i <= 3; $i++) {
         }
     }
 }
+
+$page_title = ($contract_id ? 'Edit' : 'Add New') . ' Plan';
+$page_head = '<link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">';
+require_once 'includes/header.php';
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <title><?= $contract_id ? 'Edit' : 'Add New' ?> Personal Development Plan</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; max-width: 900px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="email"], input[type="number"] { 
-            width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;
-        }
-        .btn { padding: 10px 20px; background: #007cba; color: white; border: none; cursor: pointer; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; }
-        .btn-secondary { background: #6c757d; }
-        .btn-preset { background: #28a745; margin-bottom: 20px; }
-        .error { color: red; margin-bottom: 15px; }
-        .success { color: green; margin-bottom: 15px; font-weight: bold; }
-        .option-section { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
-        .sub-option-section { border: 1px solid #eee; margin: 15px 0; padding: 15px; background: #fafafa; border-radius: 4px; }
-        .sub-option-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .sub-option-name { width: 200px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
-        .remove-sub-option { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .add-sub-option { background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
-        .pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px; }
-        .pricing-column { text-align: center; }
-        .pricing-column h4 { margin: 0 0 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; transition: all 0.3s ease; }
-        .pricing-column h4.has-price { background: #28a745; color: white; }
-        .pricing-column input { text-align: center; }
-        .pricing-column input:read-only { background: #f8f9fa; color: #666; }
-        .base-price-badge { background: #007cba; color: white; font-size: 0.7em; padding: 2px 6px; border-radius: 8px; margin-left: 5px; vertical-align: middle; }
-        .pricing-discount { font-size: 0.85em; color: #28a745; margin-top: 5px; font-weight: bold; }
-        .pricing-details { font-size: 0.8em; color: #666; margin-top: 3px; }
-        .option-minimum { margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; }
-        .option-minimum label { font-weight: normal; margin-bottom: 0; }
-        .option-minimum input { width: 80px; text-align: center; margin-left: 10px; }
 
-        /* Support Packages Styles */
-        .support-packages-section { background: #f0f7ff; border-color: #007cba; }
-        .support-packages-section h3 { color: #007cba; }
-        .section-description { color: #666; font-size: 0.9em; margin-bottom: 15px; }
-        .support-preset-selector { margin-bottom: 20px; padding: 15px; background: white; border-radius: 4px; display: flex; align-items: center; gap: 10px; }
-        .support-preset-selector select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; min-width: 200px; }
-        .preset-note { color: #666; font-size: 0.85em; font-style: italic; }
-        .support-package-item { background: white; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; padding: 15px; }
-        .support-package-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .package-name-input { width: 300px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-weight: bold; }
-        .remove-support-package { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .support-package-body { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; }
-        .package-description input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-        .package-pricing input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; }
-        .no-packages-message { color: #666; font-style: italic; padding: 20px; text-align: center; background: white; border-radius: 4px; }
-
-        /* Package Builder Styles */
-        .package-builder { background: white; border: 2px solid #17a2b8; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-        .package-builder h4 { margin: 0 0 15px 0; color: #17a2b8; display: flex; align-items: center; gap: 10px; }
-        .builder-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: end; margin-bottom: 15px; }
-        .builder-row .form-group { margin-bottom: 0; }
-        .builder-row select, .builder-row input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; }
-        .builder-preview { background: #f8f9fa; border-radius: 4px; padding: 15px; margin-top: 15px; display: none; }
-        .builder-preview.visible { display: block; }
-        .preview-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center; }
-        .preview-item { padding: 10px; }
-        .preview-item .label { font-size: 0.85em; color: #666; margin-bottom: 5px; }
-        .preview-item .value { font-size: 1.2em; font-weight: bold; }
-        .preview-item .value.regular { color: #6c757d; text-decoration: line-through; }
-        .preview-item .value.package { color: #28a745; }
-        .preview-item .value.savings { color: #17a2b8; }
-        .add-package-btn { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .add-package-btn:hover { background: #218838; }
-        .add-package-btn:disabled { background: #6c757d; cursor: not-allowed; }
-        .manage-rates-link { font-size: 0.85em; color: #17a2b8; text-decoration: none; }
-        .manage-rates-link:hover { text-decoration: underline; }
-
-        /* Package display with savings */
-        .package-with-savings { background: white; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px; overflow: hidden; }
-        .package-savings-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
-        .package-savings-header .name { font-weight: bold; font-size: 1.1em; }
-        .package-savings-header .remove-btn { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .package-savings-body { padding: 15px; }
-        .package-savings-body .description { color: #666; margin-bottom: 15px; }
-        .package-pricing-display { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
-        .pricing-box { padding: 10px; border-radius: 4px; }
-        .pricing-box.regular { background: #f8f9fa; }
-        .pricing-box.package { background: #d4edda; }
-        .pricing-box.savings { background: #d1ecf1; }
-        .pricing-box .label { font-size: 0.8em; color: #666; margin-bottom: 3px; }
-        .pricing-box .amount { font-size: 1.1em; font-weight: bold; }
-        .pricing-box.regular .amount { text-decoration: line-through; color: #999; }
-        .pricing-box.package .amount { color: #28a745; }
-        .pricing-box.savings .amount { color: #17a2b8; }
-        .quill-editor { height: 120px; }
-        .ql-toolbar { border-top: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }
-        .ql-container { border-bottom: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }
-        .description-group { margin-bottom: 15px; }
-        .hidden { display: none; }
-        .preset-section { background: #f8f9fa; padding: 20px; margin-bottom: 30px; border-radius: 4px; border-left: 4px solid #007cba; }
-        .preset-buttons { display: flex; gap: 10px; margin-top: 15px; }
-    </style>
-</head>
-<body>
+    <div class="admin-content narrow">
     <h1><?= $contract_id ? 'Edit' : 'Add New' ?> Personal Development Plan</h1>
     
     <?php if (!$contract_id): ?>
@@ -468,11 +383,29 @@ for ($i = 1; $i <= 3; $i++) {
                 </div>
                 
                 <div class="option-minimum">
-                    <label>Minimum commitment for this option: 
+                    <label>Minimum commitment for this option:
                         <input type="number" min="1" name="option_<?= $i ?>_minimum_months" value="<?= htmlspecialchars($form_data["option_{$i}_minimum_months"]) ?>"> months
                     </label>
                 </div>
-                
+
+                <div class="payment-config">
+                    <h5>Payment Configuration (Stripe)</h5>
+                    <div class="payment-config-grid">
+                        <div class="form-group">
+                            <label>Payment Mode:</label>
+                            <select name="option_<?= $i ?>_payment_mode">
+                                <option value="recurring_immediate" <?= ($form_options[$i]['payment_mode'] ?? '') === 'recurring_immediate' ? 'selected' : '' ?>>Recurring (charge first payment now)</option>
+                                <option value="deposit_and_recurring" <?= ($form_options[$i]['payment_mode'] ?? '') === 'deposit_and_recurring' ? 'selected' : '' ?>>Deposit + Recurring</option>
+                                <option value="deposit_only" <?= ($form_options[$i]['payment_mode'] ?? '') === 'deposit_only' ? 'selected' : '' ?>>Deposit Only (one-time)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Deposit Amount: <small style="color:#666;font-weight:normal;">(leave blank to use plan price)</small></label>
+                            <input type="number" step="0.01" name="option_<?= $i ?>_deposit_amount" value="<?= htmlspecialchars($form_options[$i]['deposit_amount'] ?? '') ?>" placeholder="$0.00">
+                        </div>
+                    </div>
+                </div>
+
                 <div id="sub-options-container-<?= $i ?>">
                     <?php
                     $existing_sub_options = $options[$i] ?? [];
@@ -1117,5 +1050,6 @@ for ($i = 1; $i <= 3; $i++) {
         }
     }
     </script>
-</body>
-</html>
+    </div>
+
+<?php require_once 'includes/footer.php'; ?>

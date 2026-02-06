@@ -11,8 +11,9 @@ personal-development-plan/config.php
 .claude/skills
 .claude/settings.local.json
 
-# Composer dependencies
+# Composer dependencies (PDP vendor/ committed for rsync deploy)
 vendor/
+!personal-development-plan/vendor/
 
 # OS files
 .DS_Store

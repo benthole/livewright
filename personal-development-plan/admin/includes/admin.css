@@ -1,0 +1,188 @@
+/* Admin Layout */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f8f9fa;
+}
+
+.admin-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+.admin-content.narrow {
+    max-width: 900px;
+}
+
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #333;
+}
+
+/* Buttons */
+.btn { padding: 8px 16px; background: #007cba; color: white; text-decoration: none; border-radius: 4px; display: inline-block; margin: 2px; border: none; cursor: pointer; font-size: 14px; }
+.btn:hover { opacity: 0.9; color: white; text-decoration: none; }
+.btn-danger { background: #dc3545; }
+.btn-secondary { background: #6c757d; }
+.btn-success { background: #28a745; }
+.btn-info { background: #17a2b8; }
+.btn-small { padding: 4px 8px; font-size: 0.85em; }
+.btn-preset { background: #28a745; margin-bottom: 20px; }
+
+/* Forms */
+.form-group { margin-bottom: 15px; }
+.form-group label, label.form-label { display: block; margin-bottom: 5px; font-weight: bold; }
+input[type="text"], input[type="email"], input[type="number"], input[type="password"], select {
+    width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;
+}
+
+/* Alerts */
+.error, .alert-danger { color: #721c24; margin-bottom: 15px; background: #f8d7da; padding: 10px; border-radius: 4px; }
+.success, .alert-success { color: #155724; margin-bottom: 15px; font-weight: bold; background: #d4edda; padding: 10px; border-radius: 4px; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+th { background: #f5f5f5; }
+.actions { white-space: nowrap; }
+
+/* Option Sections */
+.option-section { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 4px; background: white; }
+
+/* Sub-options */
+.sub-option-section { border: 1px solid #eee; margin: 15px 0; padding: 15px; background: #fafafa; border-radius: 4px; }
+.sub-option-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.sub-option-name { width: 300px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+.remove-sub-option { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+.add-sub-option { background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+
+/* Pricing Grid */
+.pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px; }
+.pricing-column { text-align: center; }
+.pricing-column h4 { margin: 0 0 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; transition: all 0.3s ease; }
+.pricing-column h4.has-price { background: #28a745; color: white; }
+.pricing-column input { text-align: center; }
+.pricing-column input:read-only { background: #f8f9fa; color: #666; }
+.pricing-column small { display: block; color: #666; font-size: 0.85em; margin-top: 5px; font-style: italic; }
+.pricing-details { font-size: 0.8em; color: #666; margin-top: 3px; }
+.pricing-note { font-size: 0.9em; color: #666; margin-top: 10px; font-style: italic; }
+.base-price-badge { background: #007cba; color: white; font-size: 0.7em; padding: 2px 6px; border-radius: 8px; margin-left: 5px; vertical-align: middle; }
+
+/* Minimum Commitment */
+.option-minimum { margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+.option-minimum label { font-weight: normal; margin-bottom: 0; }
+.option-minimum input { width: 80px; text-align: center; margin-left: 10px; }
+
+/* Rich Text Editor */
+.quill-editor { height: 120px; }
+.ql-toolbar { border-top: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }
+.ql-container { border-bottom: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }
+.description-group { margin-bottom: 15px; }
+.hidden { display: none; }
+
+/* Preset Section */
+.preset-section { background: #f8f9fa; padding: 20px; margin-bottom: 30px; border-radius: 4px; border-left: 4px solid #007cba; }
+.preset-buttons { display: flex; gap: 10px; margin-top: 15px; }
+
+/* Description Preview (presets table) */
+.description-preview { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Support Packages */
+.support-packages-section { background: #f0f7ff; border-color: #007cba; }
+.support-packages-section h3 { color: #007cba; }
+.section-description { color: #666; font-size: 0.9em; margin-bottom: 15px; }
+.support-preset-selector { margin-bottom: 20px; padding: 15px; background: white; border-radius: 4px; display: flex; align-items: center; gap: 10px; }
+.support-preset-selector select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; min-width: 200px; }
+.preset-note { color: #666; font-size: 0.85em; font-style: italic; }
+.support-package-item { background: white; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; padding: 15px; }
+.support-package-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.package-name-input { width: 300px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-weight: bold; }
+.remove-support-package { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+.support-package-body { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; }
+.package-description input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+.package-pricing input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; }
+.no-packages-message { color: #666; font-style: italic; padding: 20px; text-align: center; background: white; border-radius: 4px; }
+
+/* Package Builder */
+.package-builder { background: white; border: 2px solid #17a2b8; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+.package-builder h4 { margin: 0 0 15px 0; color: #17a2b8; display: flex; align-items: center; gap: 10px; }
+.builder-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: end; margin-bottom: 15px; }
+.builder-row .form-group { margin-bottom: 0; }
+.builder-row select, .builder-row input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; }
+.builder-preview { background: #f8f9fa; border-radius: 4px; padding: 15px; margin-top: 15px; display: none; }
+.builder-preview.visible { display: block; }
+.preview-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center; }
+.preview-item { padding: 10px; }
+.preview-item .label { font-size: 0.85em; color: #666; margin-bottom: 5px; }
+.preview-item .value { font-size: 1.2em; font-weight: bold; }
+.preview-item .value.regular { color: #6c757d; text-decoration: line-through; }
+.preview-item .value.package { color: #28a745; }
+.preview-item .value.savings { color: #17a2b8; }
+.add-package-btn { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.add-package-btn:hover { background: #218838; }
+.add-package-btn:disabled { background: #6c757d; cursor: not-allowed; }
+.manage-rates-link { font-size: 0.85em; color: #17a2b8; text-decoration: none; }
+.manage-rates-link:hover { text-decoration: underline; }
+
+/* Package display with savings */
+.package-with-savings { background: white; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px; overflow: hidden; }
+.package-savings-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
+.package-savings-header .name { font-weight: bold; font-size: 1.1em; }
+.package-savings-header .remove-btn { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+.package-savings-body { padding: 15px; }
+.package-savings-body .description { color: #666; margin-bottom: 15px; }
+.package-pricing-display { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+.pricing-box { padding: 10px; border-radius: 4px; }
+.pricing-box.regular { background: #f8f9fa; }
+.pricing-box.package { background: #d4edda; }
+.pricing-box.savings { background: #d1ecf1; }
+.pricing-box .label { font-size: 0.8em; color: #666; margin-bottom: 3px; }
+.pricing-box .amount { font-size: 1.1em; font-weight: bold; }
+.pricing-box.regular .amount { text-decoration: line-through; color: #999; }
+.pricing-box.package .amount { color: #28a745; }
+.pricing-box.savings .amount { color: #17a2b8; }
+
+/* Coaching Rates */
+.coach-section { border: 1px solid #ddd; margin-bottom: 30px; border-radius: 8px; overflow: hidden; }
+.coach-header { background: #007cba; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+.coach-header h2 { margin: 0; }
+.coach-body { padding: 20px; }
+.rates-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+.rates-table th, .rates-table td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+.rates-table th { background: #f5f5f5; }
+.rates-table .duration-header { background: #e9ecef; font-weight: bold; text-align: left; }
+.rate-input { width: 80px; padding: 5px; text-align: center; border: 1px solid #ddd; border-radius: 4px; }
+.rate-input:focus { border-color: #007cba; outline: none; }
+.add-coach-form { background: white; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #ddd; }
+.add-coach-form h3 { margin-top: 0; }
+.form-row { display: flex; gap: 15px; align-items: end; flex-wrap: wrap; }
+.tier-labels th { font-size: 0.9em; color: #666; }
+
+/* Link cells (dashboard) */
+.signed-icon { color: #28a745; font-size: 18px; text-align: center; }
+.unsigned { color: #dc3545; text-align: center; }
+.date-cell { white-space: nowrap; }
+.link-cell { text-align: center; }
+.link-btn { background: #17a2b8; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 0.9em; margin-right: 5px; display: inline-block; }
+.link-btn:hover { background: #138496; color: white; }
+.copy-btn { background: #6c757d; color: white; padding: 6px 12px; border: none; border-radius: 4px; font-size: 0.9em; cursor: pointer; }
+.copy-btn:hover { background: #5a6268; }
+.copy-btn.copied { background: #28a745; }
+.link-actions { display: flex; justify-content: center; gap: 5px; }
+
+/* Deposit/Payment Mode Fields (Stripe) */
+.payment-config { margin-top: 15px; padding: 15px; background: #f0f7ff; border: 1px solid #b8daff; border-radius: 4px; }
+.payment-config h5 { margin: 0 0 10px 0; color: #007cba; font-size: 0.95em; }
+.payment-config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.payment-config-grid .form-group { margin-bottom: 0; }
+.payment-config-grid select, .payment-config-grid input { width: 100%; }

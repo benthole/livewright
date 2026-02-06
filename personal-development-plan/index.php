@@ -392,6 +392,13 @@ if (empty($uid)) {
                                                             <div class="price">$<?= number_format($monthly_tier['price'], 2) ?></div>
                                                             <div class="type">per month</div>
                                                             <div class="price-details">12 payments of $<?= number_format($monthly_tier['price'], 2) ?></div>
+                                                            <?php
+                                                            $deposit = (float)($monthly_tier['deposit_amount'] ?? 0);
+                                                            $pmode = $monthly_tier['payment_mode'] ?? 'recurring_immediate';
+                                                            if ($deposit > 0 && $pmode !== 'recurring_immediate'):
+                                                            ?>
+                                                                <div class="price-details" style="color: #007cba; margin-top: 5px;">Deposit: $<?= number_format($deposit, 2) ?> due at sign-up</div>
+                                                            <?php endif; ?>
                                                         </div>
                                                     <?php endif; ?>
                                                 <?php endforeach; ?>
@@ -459,6 +466,13 @@ if (empty($uid)) {
                                                     <div class="price">$<?= number_format($monthly_tier['price'], 2) ?></div>
                                                     <div class="type">per month</div>
                                                     <div class="price-details">12 payments of $<?= number_format($monthly_tier['price'], 2) ?></div>
+                                                    <?php
+                                                    $m_deposit = (float)($monthly_tier['deposit_amount'] ?? 0);
+                                                    $m_pmode = $monthly_tier['payment_mode'] ?? 'recurring_immediate';
+                                                    if ($m_deposit > 0 && $m_pmode !== 'recurring_immediate'):
+                                                    ?>
+                                                        <div class="price-details" style="color: #007cba; margin-top: 5px;">Deposit: $<?= number_format($m_deposit, 2) ?> due at sign-up</div>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         <?php endif; ?>

@@ -15,7 +15,7 @@ Thumbs.db
 
 # Dependencies
 node_modules/
-vendor/
+# vendor/ is committed for rsync deploy (Stripe SDK)
 .venv/
 __pycache__/
 
