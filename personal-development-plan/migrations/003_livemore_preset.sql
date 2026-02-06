@@ -1,6 +1,17 @@
 -- Migration 003: LiveMORE Program Preset
 -- Creates the LiveMORE Program preset with all pricing tiers
 
+-- Fix: Add deleted_at column to coaching_rates if missing
+-- (Original migration 002 schema included it, but table may have been created without it)
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'coaching_rates' AND COLUMN_NAME = 'deleted_at');
+SET @sql = IF(@col_exists = 0,
+    'ALTER TABLE coaching_rates ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 -- Insert LiveMORE Program preset
 INSERT INTO pdp_presets (
     name,
