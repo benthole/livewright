@@ -244,44 +244,48 @@ for ($i = 1; $i <= 3; $i++) {
                     <?php if (empty($form_options[$i]['sub_options'])): ?>
                         <div class="pricing-grid">
                             <div class="pricing-column">
-                                <h4 <?= !empty($form_options[$i]['yearly']) ? 'class="has-price"' : '' ?>>Yearly <span class="base-price-badge">Base</span></h4>
-                                <input type="number" step="0.01" name="option_<?= $i ?>_price_yearly" value="<?= htmlspecialchars($form_options[$i]['yearly']) ?>" placeholder="$0.00" onchange="updatePriceHeader(this)" oninput="calculatePricingFromAnnual(<?= $i ?>)">
-                            </div>
-
-                            <div class="pricing-column">
-                                <h4 <?= !empty($form_options[$i]['quarterly']) ? 'class="has-price"' : '' ?>>Quarterly</h4>
-                                <input type="number" step="0.01" name="option_<?= $i ?>_price_quarterly" value="<?= htmlspecialchars($form_options[$i]['quarterly']) ?>" placeholder="Auto" class="auto-calculated" readonly>
-                                <small>Annual/4 + 5%</small>
+                                <h4 <?= !empty($form_options[$i]['yearly']) ? 'class="has-price"' : '' ?>>Pay in Full</h4>
+                                <input type="number" step="0.01" name="option_<?= $i ?>_price_yearly" value="<?= htmlspecialchars($form_options[$i]['yearly']) ?>" placeholder="$0.00" onchange="updatePriceHeader(this)">
+                                <small>Full program price</small>
                             </div>
 
                             <div class="pricing-column">
                                 <h4 <?= !empty($form_options[$i]['monthly']) ? 'class="has-price"' : '' ?>>Monthly</h4>
-                                <input type="number" step="0.01" name="option_<?= $i ?>_price_monthly" value="<?= htmlspecialchars($form_options[$i]['monthly']) ?>" placeholder="Auto" class="auto-calculated" readonly>
-                                <small>Annual/12 + 10%</small>
+                                <input type="number" step="0.01" name="option_<?= $i ?>_price_monthly" value="<?= htmlspecialchars($form_options[$i]['monthly']) ?>" placeholder="$0.00" onchange="updatePriceHeader(this)">
+                                <small>Monthly x 12 payments</small>
                             </div>
+
+                            <div class="pricing-column">
+                                <h4 <?= !empty($form_options[$i]['quarterly']) ? 'class="has-price"' : '' ?>>Quarterly <span style="font-size:0.7em;color:#999;">(optional)</span></h4>
+                                <input type="number" step="0.01" name="option_<?= $i ?>_price_quarterly" value="<?= htmlspecialchars($form_options[$i]['quarterly']) ?>" placeholder="Leave blank to hide">
+                                <small>Leave empty to show only Pay in Full + Monthly</small>
+                            </div>
+                        </div>
+                        <div style="margin-top:10px;">
+                            <button type="button" class="add-sub-option" style="background:#17a2b8;font-size:0.85em;padding:5px 12px;" onclick="autoCalcPricing(<?= $i ?>)">Auto-calculate from Pay in Full</button>
+                            <span style="color:#999;font-size:0.85em;margin-left:8px;">Sets Monthly = Annual/12, Quarterly = Annual/4</span>
                         </div>
                         <div class="pricing-note">Use simple pricing above OR click "+ Add Sub-Option" below for variations (e.g. different coaches)</div>
                     <?php else: ?>
                         <?php foreach ($form_options[$i]['sub_options'] as $sub_index => $sub_option): ?>
                             <div class="sub-option-section">
                                 <div class="sub-option-header">
-                                    <input type="text" name="option_<?= $i ?>_sub_<?= $sub_index + 1 ?>_name" value="<?= htmlspecialchars($sub_option['name']) ?>" placeholder="Sub-option name (e.g. Coach A, Coach B)" class="sub-option-name" required>
+                                    <input type="text" name="option_<?= $i ?>_sub_<?= $sub_index + 1 ?>_name" value="<?= htmlspecialchars($sub_option['name']) ?>" placeholder="Sub-option name (e.g. Elizabeth Tuazon, Dr. Judith Wright)" class="sub-option-name" required>
                                     <button type="button" class="remove-sub-option" onclick="removeSubOption(this)">Remove</button>
                                 </div>
                                 <div class="pricing-grid">
                                     <div class="pricing-column">
-                                        <h4>Yearly <span class="base-price-badge">Base</span></h4>
-                                        <input type="number" step="0.01" name="option_<?= $i ?>_sub_<?= $sub_index + 1 ?>_price_yearly" value="<?= htmlspecialchars($sub_option['yearly'] ?? '') ?>" placeholder="$0.00" oninput="calculateSubOptionPricingFromAnnual(this, <?= $i ?>, <?= $sub_index + 1 ?>)">
-                                    </div>
-                                    <div class="pricing-column">
-                                        <h4>Quarterly</h4>
-                                        <input type="number" step="0.01" name="option_<?= $i ?>_sub_<?= $sub_index + 1 ?>_price_quarterly" value="<?= htmlspecialchars($sub_option['quarterly'] ?? '') ?>" placeholder="Auto" class="auto-calculated" readonly>
-                                        <small>Annual/4 + 5%</small>
+                                        <h4>Pay in Full</h4>
+                                        <input type="number" step="0.01" name="option_<?= $i ?>_sub_<?= $sub_index + 1 ?>_price_yearly" value="<?= htmlspecialchars($sub_option['yearly'] ?? '') ?>" placeholder="$0.00">
                                     </div>
                                     <div class="pricing-column">
                                         <h4>Monthly</h4>
-                                        <input type="number" step="0.01" name="option_<?= $i ?>_sub_<?= $sub_index + 1 ?>_price_monthly" value="<?= htmlspecialchars($sub_option['monthly'] ?? '') ?>" placeholder="Auto" class="auto-calculated" readonly>
-                                        <small>Annual/12 + 10%</small>
+                                        <input type="number" step="0.01" name="option_<?= $i ?>_sub_<?= $sub_index + 1 ?>_price_monthly" value="<?= htmlspecialchars($sub_option['monthly'] ?? '') ?>" placeholder="$0.00">
+                                        <small>Monthly x 12 payments</small>
+                                    </div>
+                                    <div class="pricing-column">
+                                        <h4>Quarterly <span style="font-size:0.7em;color:#999;">(optional)</span></h4>
+                                        <input type="number" step="0.01" name="option_<?= $i ?>_sub_<?= $sub_index + 1 ?>_price_quarterly" value="<?= htmlspecialchars($sub_option['quarterly'] ?? '') ?>" placeholder="Leave blank">
                                     </div>
                                 </div>
                             </div>
@@ -387,8 +391,8 @@ for ($i = 1; $i <= 3; $i++) {
         }
     }
     
-    // Calculate quarterly and monthly prices FROM ANNUAL (annual is base, others are markups)
-    function calculatePricingFromAnnual(optionNumber) {
+    // Auto-calculate pricing from Pay in Full (no markup - simple division)
+    function autoCalcPricing(optionNumber) {
         const yearlyInput = document.querySelector(`input[name="option_${optionNumber}_price_yearly"]`);
         const quarterlyInput = document.querySelector(`input[name="option_${optionNumber}_price_quarterly"]`);
         const monthlyInput = document.querySelector(`input[name="option_${optionNumber}_price_monthly"]`);
@@ -398,48 +402,14 @@ for ($i = 1; $i <= 3; $i++) {
         const yearly = parseFloat(yearlyInput.value) || 0;
 
         if (yearly > 0) {
-            // Quarterly: Annual/4 + 5% markup
-            const quarterlyBase = yearly / 4;
-            const quarterly = quarterlyBase * 1.05;
-            quarterlyInput.value = quarterly.toFixed(2);
+            const monthly = Math.round(yearly / 12 * 100) / 100;
+            const quarterly = Math.round(yearly / 4 * 100) / 100;
 
-            // Monthly: Annual/12 + 10% markup
-            const monthlyBase = yearly / 12;
-            const monthly = monthlyBase * 1.10;
             monthlyInput.value = monthly.toFixed(2);
+            quarterlyInput.value = quarterly.toFixed(2);
 
             updatePriceHeader(quarterlyInput);
             updatePriceHeader(monthlyInput);
-        } else {
-            quarterlyInput.value = '';
-            monthlyInput.value = '';
-            updatePriceHeader(quarterlyInput);
-            updatePriceHeader(monthlyInput);
-        }
-    }
-
-    // Calculate sub-option pricing FROM ANNUAL
-    function calculateSubOptionPricingFromAnnual(yearlyInput, optionNumber, subIndex) {
-        const quarterlyInput = document.querySelector(`input[name="option_${optionNumber}_sub_${subIndex}_price_quarterly"]`);
-        const monthlyInput = document.querySelector(`input[name="option_${optionNumber}_sub_${subIndex}_price_monthly"]`);
-
-        if (!quarterlyInput || !monthlyInput) return;
-
-        const yearly = parseFloat(yearlyInput.value) || 0;
-
-        if (yearly > 0) {
-            // Quarterly: Annual/4 + 5% markup
-            const quarterlyBase = yearly / 4;
-            const quarterly = quarterlyBase * 1.05;
-            quarterlyInput.value = quarterly.toFixed(2);
-
-            // Monthly: Annual/12 + 10% markup
-            const monthlyBase = yearly / 12;
-            const monthly = monthlyBase * 1.10;
-            monthlyInput.value = monthly.toFixed(2);
-        } else {
-            quarterlyInput.value = '';
-            monthlyInput.value = '';
         }
     }
 
@@ -451,23 +421,22 @@ for ($i = 1; $i <= 3; $i++) {
         const subOptionHtml = `
             <div class="sub-option-section">
                 <div class="sub-option-header">
-                    <input type="text" name="option_${optionNumber}_sub_${subIndex}_name" placeholder="Sub-option name (e.g. Coach A, Coach B)" class="sub-option-name" required>
+                    <input type="text" name="option_${optionNumber}_sub_${subIndex}_name" placeholder="Sub-option name (e.g. Elizabeth Tuazon, Dr. Judith Wright)" class="sub-option-name" required>
                     <button type="button" class="remove-sub-option" onclick="removeSubOption(this)">Remove</button>
                 </div>
                 <div class="pricing-grid">
                     <div class="pricing-column">
-                        <h4>Yearly <span class="base-price-badge">Base</span></h4>
-                        <input type="number" step="0.01" name="option_${optionNumber}_sub_${subIndex}_price_yearly" placeholder="$0.00" oninput="calculateSubOptionPricingFromAnnual(this, ${optionNumber}, ${subIndex})">
-                    </div>
-                    <div class="pricing-column">
-                        <h4>Quarterly</h4>
-                        <input type="number" step="0.01" name="option_${optionNumber}_sub_${subIndex}_price_quarterly" placeholder="Auto" class="auto-calculated" readonly>
-                        <small>Annual/4 + 5%</small>
+                        <h4>Pay in Full</h4>
+                        <input type="number" step="0.01" name="option_${optionNumber}_sub_${subIndex}_price_yearly" placeholder="$0.00">
                     </div>
                     <div class="pricing-column">
                         <h4>Monthly</h4>
-                        <input type="number" step="0.01" name="option_${optionNumber}_sub_${subIndex}_price_monthly" placeholder="Auto" class="auto-calculated" readonly>
-                        <small>Annual/12 + 10%</small>
+                        <input type="number" step="0.01" name="option_${optionNumber}_sub_${subIndex}_price_monthly" placeholder="$0.00">
+                        <small>Monthly x 12 payments</small>
+                    </div>
+                    <div class="pricing-column">
+                        <h4>Quarterly <span style="font-size:0.7em;color:#999;">(optional)</span></h4>
+                        <input type="number" step="0.01" name="option_${optionNumber}_sub_${subIndex}_price_quarterly" placeholder="Leave blank">
                     </div>
                 </div>
             </div>
@@ -491,26 +460,31 @@ for ($i = 1; $i <= 3; $i++) {
         const container = subOption.closest('[id^="sub-options-container-"]');
         subOption.remove();
 
-        // If no sub-options left, restore simple pricing grid - ANNUAL FIRST
+        // If no sub-options left, restore simple pricing grid
         const remainingSubOptions = container.querySelectorAll('.sub-option-section');
         if (remainingSubOptions.length === 0) {
             const optionNumber = container.id.split('-').pop();
             const simplePricingHtml = `
                 <div class="pricing-grid">
                     <div class="pricing-column">
-                        <h4>Yearly <span class="base-price-badge">Base</span></h4>
-                        <input type="number" step="0.01" name="option_${optionNumber}_price_yearly" placeholder="$0.00" onchange="updatePriceHeader(this)" oninput="calculatePricingFromAnnual(${optionNumber})">
-                    </div>
-                    <div class="pricing-column">
-                        <h4>Quarterly</h4>
-                        <input type="number" step="0.01" name="option_${optionNumber}_price_quarterly" placeholder="Auto" class="auto-calculated" readonly>
-                        <small>Annual/4 + 5%</small>
+                        <h4>Pay in Full</h4>
+                        <input type="number" step="0.01" name="option_${optionNumber}_price_yearly" placeholder="$0.00" onchange="updatePriceHeader(this)">
+                        <small>Full program price</small>
                     </div>
                     <div class="pricing-column">
                         <h4>Monthly</h4>
-                        <input type="number" step="0.01" name="option_${optionNumber}_price_monthly" placeholder="Auto" class="auto-calculated" readonly>
-                        <small>Annual/12 + 10%</small>
+                        <input type="number" step="0.01" name="option_${optionNumber}_price_monthly" placeholder="$0.00" onchange="updatePriceHeader(this)">
+                        <small>Monthly x 12 payments</small>
                     </div>
+                    <div class="pricing-column">
+                        <h4>Quarterly <span style="font-size:0.7em;color:#999;">(optional)</span></h4>
+                        <input type="number" step="0.01" name="option_${optionNumber}_price_quarterly" placeholder="Leave blank to hide">
+                        <small>Leave empty to show only Pay in Full + Monthly</small>
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <button type="button" class="add-sub-option" style="background:#17a2b8;font-size:0.85em;padding:5px 12px;" onclick="autoCalcPricing(${optionNumber})">Auto-calculate from Pay in Full</button>
+                    <span style="color:#999;font-size:0.85em;margin-left:8px;">Sets Monthly = Annual/12, Quarterly = Annual/4</span>
                 </div>
                 <div class="pricing-note">Use simple pricing above OR click "+ Add Sub-Option" below for variations (e.g. different coaches)</div>
             `;
@@ -518,22 +492,11 @@ for ($i = 1; $i <= 3; $i++) {
         }
     }
 
-    // Initialize calculations on page load for existing values - ANNUAL FIRST
+    // Update price headers on page load for existing values
     window.addEventListener('DOMContentLoaded', function() {
-        // Calculate for main options from annual
-        for (let i = 1; i <= 3; i++) {
-            calculatePricingFromAnnual(i);
-        }
-
-        // Calculate for sub-options that exist from annual
-        document.querySelectorAll('input[name*="_sub_"][name*="_price_yearly"]').forEach(input => {
-            const match = input.name.match(/option_(\d+)_sub_(\d+)_price_yearly/);
-            if (match) {
-                const optionNum = parseInt(match[1]);
-                const subIdx = parseInt(match[2]);
-                if (input.value) {
-                    calculateSubOptionPricingFromAnnual(input, optionNum, subIdx);
-                }
+        document.querySelectorAll('.pricing-grid input[type="number"]').forEach(input => {
+            if (input.value) {
+                updatePriceHeader(input);
             }
         });
     });

@@ -5,45 +5,12 @@ $uid = $_GET['uid'] ?? '';
 $contract = null;
 $options = [];
 
-// Helper function to calculate savings from annual base price
-// Annual is the base, quarterly/monthly are markups from it
-function calculateSavingsFromAnnual($yearlyPrice, $type) {
-    if ($type === 'Quarterly') {
-        // Quarterly is annual/4 + 5% markup
-        $baseQuarterly = $yearlyPrice / 4;
-        $markup = $baseQuarterly * 0.05;
-        $quarterlyPrice = $baseQuarterly + $markup;
-        // What they'd pay over a year at quarterly rate
-        $yearlyAtQuarterly = $quarterlyPrice * 4;
-        $extraCost = $yearlyAtQuarterly - $yearlyPrice;
-        return [
-            'quarterly_price' => $quarterlyPrice,
-            'yearly_equivalent' => $yearlyAtQuarterly,
-            'extra_vs_annual' => $extraCost,
-            'markup_percent' => 5
-        ];
-    } elseif ($type === 'Monthly') {
-        // Monthly is annual/12 + 10% markup
-        $baseMonthly = $yearlyPrice / 12;
-        $markup = $baseMonthly * 0.10;
-        $monthlyPrice = $baseMonthly + $markup;
-        // What they'd pay over a year at monthly rate
-        $yearlyAtMonthly = $monthlyPrice * 12;
-        $extraCost = $yearlyAtMonthly - $yearlyPrice;
-        return [
-            'monthly_price' => $monthlyPrice,
-            'yearly_equivalent' => $yearlyAtMonthly,
-            'extra_vs_annual' => $extraCost,
-            'markup_percent' => 10
-        ];
-    }
-    return null;
-}
-
-// Helper function to calculate annual savings display
-function getAnnualSavings($yearlyPrice, $monthlyPrice) {
+// Helper function to calculate savings when paying in full vs monthly installments
+function getPayInFullSavings($yearlyPrice, $monthlyPrice) {
+    if ($monthlyPrice <= 0 || $yearlyPrice <= 0) return null;
     $yearlyAtMonthly = $monthlyPrice * 12;
     $savings = $yearlyAtMonthly - $yearlyPrice;
+    if ($savings <= 0) return null;
     $percent = ($savings / $yearlyAtMonthly) * 100;
     return [
         'savings' => $savings,
@@ -372,12 +339,21 @@ if (empty($uid)) {
                                 <div><?= $description ?></div>
                                 
                                 <?php if ($has_sub_options): ?>
-                                    <!-- Display sub-options stacked by billing period - ANNUAL FIRST -->
+                                    <!-- Display sub-options stacked by billing period -->
+                                    <?php
+                                    // Check if any sub-option has quarterly pricing
+                                    $has_quarterly = false;
+                                    foreach ($sub_options as $sub_name => $tiers) {
+                                        $quarterly_tier = array_filter($tiers, fn($t) => $t['type'] === 'Quarterly');
+                                        if (!empty($quarterly_tier)) { $has_quarterly = true; break; }
+                                    }
+                                    $col_count = $has_quarterly ? 3 : 2;
+                                    ?>
                                     <div class="sub-options-container">
-                                        <div class="pricing-columns">
-                                            <!-- Yearly Column (FIRST - Best Value) -->
+                                        <div class="pricing-columns" style="grid-template-columns: repeat(<?= $col_count ?>, 1fr);">
+                                            <!-- Pay in Full Column -->
                                             <div class="pricing-column">
-                                                <h4>Yearly <span class="best-value-badge">Best Value</span></h4>
+                                                <h4>Pay in Full <span class="best-value-badge">Best Value</span></h4>
                                                 <?php foreach ($sub_options as $sub_name => $tiers): ?>
                                                     <?php
                                                     $yearly_tier = array_filter($tiers, fn($t) => $t['type'] === 'Yearly');
@@ -387,48 +363,24 @@ if (empty($uid)) {
                                                     $monthly_price = $monthly_tier ? $monthly_tier['price'] : 0;
 
                                                     if ($yearly_tier):
-                                                        $savings = $monthly_price > 0 ? getAnnualSavings($yearly_tier['price'], $monthly_price) : null;
+                                                        $savings = getPayInFullSavings($yearly_tier['price'], $monthly_price);
                                                     ?>
                                                         <div class="pricing-tier recommended" onclick="selectOption(<?= $yearly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($yearly_tier['description'])) ?>', <?= $yearly_tier['price'] ?>, '<?= $yearly_tier['type'] ?>', '<?= htmlspecialchars(addslashes($sub_name)) ?>')">
                                                             <div class="sub-option-label"><?= htmlspecialchars($sub_name) ?></div>
                                                             <div class="price">$<?= number_format($yearly_tier['price'], 2) ?></div>
-                                                            <div class="type">per year</div>
-                                                            <?php if ($savings && $savings['savings'] > 0): ?>
-                                                                <div class="price-discount">Save <?= $savings['percent'] ?>% ($<?= number_format($savings['savings'], 2) ?>/yr)</div>
-                                                                <div class="price-details">vs monthly billing</div>
+                                                            <div class="type">one-time payment</div>
+                                                            <?php if ($savings): ?>
+                                                                <div class="price-discount">Save $<?= number_format($savings['savings'], 2) ?></div>
+                                                                <div class="price-details">vs 12 monthly payments</div>
                                                             <?php endif; ?>
                                                         </div>
                                                     <?php endif; ?>
                                                 <?php endforeach; ?>
                                             </div>
 
-                                            <!-- Quarterly Column -->
+                                            <!-- Monthly Payments Column -->
                                             <div class="pricing-column">
-                                                <h4>Quarterly</h4>
-                                                <?php foreach ($sub_options as $sub_name => $tiers): ?>
-                                                    <?php
-                                                    $quarterly_tier = array_filter($tiers, fn($t) => $t['type'] === 'Quarterly');
-                                                    $quarterly_tier = reset($quarterly_tier);
-                                                    $yearly_tier = array_filter($tiers, fn($t) => $t['type'] === 'Yearly');
-                                                    $yearly_tier = reset($yearly_tier);
-                                                    $yearly_price = $yearly_tier ? $yearly_tier['price'] : 0;
-
-                                                    if ($quarterly_tier && $yearly_price):
-                                                        $calc = calculateSavingsFromAnnual($yearly_price, 'Quarterly');
-                                                    ?>
-                                                        <div class="pricing-tier" onclick="selectOption(<?= $quarterly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($quarterly_tier['description'])) ?>', <?= $quarterly_tier['price'] ?>, '<?= $quarterly_tier['type'] ?>', '<?= htmlspecialchars(addslashes($sub_name)) ?>')">
-                                                            <div class="sub-option-label"><?= htmlspecialchars($sub_name) ?></div>
-                                                            <div class="price">$<?= number_format($quarterly_tier['price'], 2) ?></div>
-                                                            <div class="type">per quarter</div>
-                                                            <div class="price-details">4 payments of $<?= number_format($quarterly_tier['price'], 2) ?></div>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                <?php endforeach; ?>
-                                            </div>
-
-                                            <!-- Monthly Column -->
-                                            <div class="pricing-column">
-                                                <h4>Monthly</h4>
+                                                <h4>Monthly Payments</h4>
                                                 <?php foreach ($sub_options as $sub_name => $tiers): ?>
                                                     <?php
                                                     $monthly_tier = array_filter($tiers, fn($t) => $t['type'] === 'Monthly');
@@ -444,47 +396,82 @@ if (empty($uid)) {
                                                     <?php endif; ?>
                                                 <?php endforeach; ?>
                                             </div>
+
+                                            <?php if ($has_quarterly): ?>
+                                            <!-- Quarterly Column (only shown if quarterly prices exist) -->
+                                            <div class="pricing-column">
+                                                <h4>Quarterly</h4>
+                                                <?php foreach ($sub_options as $sub_name => $tiers): ?>
+                                                    <?php
+                                                    $quarterly_tier = array_filter($tiers, fn($t) => $t['type'] === 'Quarterly');
+                                                    $quarterly_tier = reset($quarterly_tier);
+
+                                                    if ($quarterly_tier):
+                                                    ?>
+                                                        <div class="pricing-tier" onclick="selectOption(<?= $quarterly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($quarterly_tier['description'])) ?>', <?= $quarterly_tier['price'] ?>, '<?= $quarterly_tier['type'] ?>', '<?= htmlspecialchars(addslashes($sub_name)) ?>')">
+                                                            <div class="sub-option-label"><?= htmlspecialchars($sub_name) ?></div>
+                                                            <div class="price">$<?= number_format($quarterly_tier['price'], 2) ?></div>
+                                                            <div class="type">per quarter</div>
+                                                            <div class="price-details">4 payments of $<?= number_format($quarterly_tier['price'], 2) ?></div>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            </div>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 <?php else: ?>
-                                    <!-- Simple pricing (no sub-options) - ANNUAL FIRST -->
+                                    <!-- Simple pricing (no sub-options) -->
                                     <?php
-                                    // Reorder to Yearly, Quarterly, Monthly
-                                    $ordered_types = ['Yearly', 'Quarterly', 'Monthly'];
-                                    $ordered_tiers = [];
-                                    foreach ($ordered_types as $type) {
-                                        foreach ($sub_options['Default'] as $tier) {
-                                            if ($tier['type'] === $type) {
-                                                $ordered_tiers[] = $tier;
-                                            }
-                                        }
+                                    // Gather available tiers
+                                    $yearly_tier = null;
+                                    $monthly_tier = null;
+                                    $quarterly_tier = null;
+                                    foreach ($sub_options['Default'] as $tier) {
+                                        if ($tier['type'] === 'Yearly') $yearly_tier = $tier;
+                                        if ($tier['type'] === 'Monthly') $monthly_tier = $tier;
+                                        if ($tier['type'] === 'Quarterly') $quarterly_tier = $tier;
                                     }
-                                    $yearly_price = 0;
-                                    $monthly_price = 0;
-                                    foreach ($ordered_tiers as $tier) {
-                                        if ($tier['type'] === 'Yearly') $yearly_price = $tier['price'];
-                                        if ($tier['type'] === 'Monthly') $monthly_price = $tier['price'];
-                                    }
-                                    $savings = $monthly_price > 0 ? getAnnualSavings($yearly_price, $monthly_price) : null;
+                                    $yearly_price = $yearly_tier ? $yearly_tier['price'] : 0;
+                                    $monthly_price = $monthly_tier ? $monthly_tier['price'] : 0;
+                                    $savings = getPayInFullSavings($yearly_price, $monthly_price);
+                                    $has_quarterly = !empty($quarterly_tier);
+                                    $col_count = $has_quarterly ? 3 : 2;
                                     ?>
-                                    <div class="pricing-columns" style="margin-top: 20px;">
-                                        <?php foreach ($ordered_tiers as $tier): ?>
+                                    <div class="pricing-columns" style="margin-top: 20px; grid-template-columns: repeat(<?= $col_count ?>, 1fr);">
+                                        <?php if ($yearly_tier): ?>
                                             <div class="pricing-column">
-                                                <div class="pricing-tier <?= $tier['type'] === 'Yearly' ? 'recommended' : '' ?>" onclick="selectOption(<?= $tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($tier['description'])) ?>', <?= $tier['price'] ?>, '<?= $tier['type'] ?>')">
-                                                    <h4><?= htmlspecialchars($tier['type']) ?><?= $tier['type'] === 'Yearly' ? ' <span class="best-value-badge">Best Value</span>' : '' ?></h4>
-                                                    <div class="price">$<?= number_format($tier['price'], 2) ?></div>
-                                                    <div class="type"><?= $tier['type'] === 'Yearly' ? 'per year' : ($tier['type'] === 'Quarterly' ? 'per quarter' : 'per month') ?></div>
-                                                    <?php if ($tier['type'] === 'Yearly' && $savings && $savings['savings'] > 0): ?>
-                                                        <div class="price-discount">Save <?= $savings['percent'] ?>% ($<?= number_format($savings['savings'], 2) ?>/yr)</div>
-                                                        <div class="price-details">vs monthly billing</div>
-                                                    <?php elseif ($tier['type'] === 'Monthly'): ?>
-                                                        <div class="price-details">12 payments of $<?= number_format($tier['price'], 2) ?></div>
-                                                    <?php elseif ($tier['type'] === 'Quarterly'): ?>
-                                                        <div class="price-details">4 payments of $<?= number_format($tier['price'], 2) ?></div>
+                                                <div class="pricing-tier recommended" onclick="selectOption(<?= $yearly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($yearly_tier['description'])) ?>', <?= $yearly_tier['price'] ?>, '<?= $yearly_tier['type'] ?>')">
+                                                    <h4>Pay in Full <span class="best-value-badge">Best Value</span></h4>
+                                                    <div class="price">$<?= number_format($yearly_tier['price'], 2) ?></div>
+                                                    <div class="type">one-time payment</div>
+                                                    <?php if ($savings): ?>
+                                                        <div class="price-discount">Save $<?= number_format($savings['savings'], 2) ?></div>
+                                                        <div class="price-details">vs 12 monthly payments</div>
                                                     <?php endif; ?>
                                                 </div>
                                             </div>
-                                        <?php endforeach; ?>
+                                        <?php endif; ?>
+                                        <?php if ($monthly_tier): ?>
+                                            <div class="pricing-column">
+                                                <div class="pricing-tier" onclick="selectOption(<?= $monthly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($monthly_tier['description'])) ?>', <?= $monthly_tier['price'] ?>, '<?= $monthly_tier['type'] ?>')">
+                                                    <h4>Monthly Payments</h4>
+                                                    <div class="price">$<?= number_format($monthly_tier['price'], 2) ?></div>
+                                                    <div class="type">per month</div>
+                                                    <div class="price-details">12 payments of $<?= number_format($monthly_tier['price'], 2) ?></div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if ($has_quarterly): ?>
+                                            <div class="pricing-column">
+                                                <div class="pricing-tier" onclick="selectOption(<?= $quarterly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($quarterly_tier['description'])) ?>', <?= $quarterly_tier['price'] ?>, '<?= $quarterly_tier['type'] ?>')">
+                                                    <h4>Quarterly</h4>
+                                                    <div class="price">$<?= number_format($quarterly_tier['price'], 2) ?></div>
+                                                    <div class="type">per quarter</div>
+                                                    <div class="price-details">4 payments of $<?= number_format($quarterly_tier['price'], 2) ?></div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
                                 
