@@ -393,7 +393,7 @@ require_once 'includes/header.php';
                     <div class="payment-config-grid">
                         <div class="form-group">
                             <label>Payment Mode:</label>
-                            <select name="option_<?= $i ?>_payment_mode">
+                            <select name="option_<?= $i ?>_payment_mode" id="payment_mode_<?= $i ?>" onchange="syncDepositFields(<?= $i ?>)">
                                 <option value="recurring_immediate" <?= ($form_options[$i]['payment_mode'] ?? '') === 'recurring_immediate' ? 'selected' : '' ?>>Recurring (charge first payment now)</option>
                                 <option value="deposit_and_recurring" <?= ($form_options[$i]['payment_mode'] ?? '') === 'deposit_and_recurring' ? 'selected' : '' ?>>Deposit + Recurring</option>
                                 <option value="deposit_only" <?= ($form_options[$i]['payment_mode'] ?? '') === 'deposit_only' ? 'selected' : '' ?>>Deposit Only (one-time)</option>
@@ -401,7 +401,7 @@ require_once 'includes/header.php';
                         </div>
                         <div class="form-group">
                             <label>Deposit Amount: <small style="color:#666;font-weight:normal;">(leave blank to use plan price)</small></label>
-                            <input type="number" step="0.01" name="option_<?= $i ?>_deposit_amount" value="<?= htmlspecialchars($form_options[$i]['deposit_amount'] ?? '') ?>" placeholder="$0.00">
+                            <input type="number" step="0.01" name="option_<?= $i ?>_deposit_amount" id="deposit_amount_<?= $i ?>" value="<?= htmlspecialchars($form_options[$i]['deposit_amount'] ?? '') ?>" placeholder="$0.00" oninput="syncDepositFields(<?= $i ?>)">
                         </div>
                     </div>
                 </div>
@@ -1047,6 +1047,24 @@ require_once 'includes/header.php';
         const hasPackages = container.querySelectorAll('.support-package-item, .package-with-savings').length > 0;
         if (!hasPackages) {
             container.innerHTML = '<div class="no-packages-message">No support packages added yet. Use the Package Builder above or add manually below.</div>';
+        }
+    }
+
+    // Auto-switch payment mode when deposit amount is entered/cleared
+    function syncDepositFields(optNum) {
+        const modeSelect = document.getElementById('payment_mode_' + optNum);
+        const depositInput = document.getElementById('deposit_amount_' + optNum);
+        if (!modeSelect || !depositInput) return;
+
+        const hasDeposit = depositInput.value && parseFloat(depositInput.value) > 0;
+
+        // If user entered a deposit and mode is still "recurring_immediate", switch to "deposit_and_recurring"
+        if (hasDeposit && modeSelect.value === 'recurring_immediate') {
+            modeSelect.value = 'deposit_and_recurring';
+        }
+        // If user cleared the deposit and mode is a deposit mode, switch back to "recurring_immediate"
+        if (!hasDeposit && (modeSelect.value === 'deposit_and_recurring' || modeSelect.value === 'deposit_only')) {
+            modeSelect.value = 'recurring_immediate';
         }
     }
     </script>
