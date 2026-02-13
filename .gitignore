@@ -4,6 +4,9 @@ config.php
 roster/settings.php
 roster/config.php
 personal-development-plan/config.php
+scholarship/config.php
+scholarship/uploads/*
+!scholarship/uploads/.gitkeep
 
 # Claude Code symlinks (linked from parent)
 .claude/agents
