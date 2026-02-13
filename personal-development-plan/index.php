@@ -80,9 +80,9 @@ if (empty($uid)) {
         
         .pricing-tier { border: 1px solid #ddd; border-radius: 4px; padding: 15px; text-align: center; background: white; cursor: pointer; transition: all 0.3s ease; margin-bottom: 10px; }
         .pricing-tier:hover { border-color: #007cba; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .pricing-tier.selected { border-color: #007cba; background: #f0f8ff; border-width: 2px; }
+        .pricing-tier.selected { border-color: #28a745; background: #f0fff4; border-width: 2px; }
         .pricing-tier .sub-option-label { font-weight: bold; color: #333; margin-bottom: 8px; font-size: 0.95em; }
-        .pricing-tier.recommended { border-color: #28a745; background: #f0fff4; border-width: 2px; }
+        .pricing-tier.recommended { border-color: #333; background: white; border-width: 2px; }
         .price { font-size: 1.5em; font-weight: bold; color: #28a745; margin: 5px 0; }
         .type { color: #666; font-size: 0.9em; }
         .price-discount { font-size: 0.85em; color: #28a745; margin-top: 5px; font-weight: 600; }
@@ -250,7 +250,7 @@ if (empty($uid)) {
         }
         .cart-checkout-btn:hover { background: #218838; }
 
-        /* Remove default highlighting once user selects */
+        /* Dim recommended cards once user selects a different option */
         .pricing-tier.recommended.user-selected-elsewhere {
             border-color: #ddd;
             background: white;
@@ -258,6 +258,12 @@ if (empty($uid)) {
         }
         .pricing-tier.recommended.user-selected-elsewhere:hover {
             border-color: #007cba;
+        }
+        /* Selected recommended card gets the green treatment */
+        .pricing-tier.recommended.selected {
+            border-color: #28a745;
+            background: #f0fff4;
+            border-width: 2px;
         }
     </style>
 </head>
