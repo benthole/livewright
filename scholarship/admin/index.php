@@ -38,8 +38,8 @@ if ($filter_status && in_array($filter_status, ['pending', 'under_review', 'appr
 }
 
 if ($filter_type && in_array($filter_type, ['mission_discount', 'need_scholarship'])) {
-    $where[] = 'application_type = ?';
-    $params[] = $filter_type;
+    $where[] = 'application_type LIKE ?';
+    $params[] = '%' . $filter_type . '%';
 }
 
 $sql = "SELECT * FROM scholarship_applications WHERE " . implode(' AND ', $where) . " ORDER BY created_at DESC";
@@ -112,9 +112,12 @@ include 'includes/header.php';
                     <td><?= htmlspecialchars($app['first_name'] . ' ' . $app['last_name']) ?></td>
                     <td><a href="mailto:<?= htmlspecialchars($app['email']) ?>"><?= htmlspecialchars($app['email']) ?></a></td>
                     <td>
-                        <?php if ($app['application_type'] === 'mission_discount'): ?>
+                        <?php
+                        $types = explode(',', $app['application_type']);
+                        if (in_array('mission_discount', $types)): ?>
                             <span class="badge-type badge-mission">Mission</span>
-                        <?php else: ?>
+                        <?php endif;
+                        if (in_array('need_scholarship', $types)): ?>
                             <span class="badge-type badge-need">Need-Based</span>
                         <?php endif; ?>
                     </td>

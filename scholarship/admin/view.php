@@ -46,11 +46,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verify_csrf_token($_POST['csrf_toke
             $stmt->execute([$notes, $app['id']]);
             $app['admin_notes'] = $notes;
             $success_msg = 'Notes saved.';
+        } elseif ($_POST['action'] === 'update_scholarship_amount') {
+            $amount = $_POST['scholarship_amount'] ?? '';
+            $valid_amounts = ['', '295', '395', '495'];
+            if (in_array($amount, $valid_amounts)) {
+                $stmt = $pdo->prepare("UPDATE scholarship_applications SET scholarship_amount = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?");
+                $stmt->execute([$amount ?: null, $user['name'], $app['id']]);
+                $app['scholarship_amount'] = $amount ?: null;
+                $app['reviewed_by'] = $user['name'];
+                $success_msg = 'Scholarship amount updated.';
+            }
         }
     }
 }
 
-$is_need_based = $app['application_type'] === 'need_scholarship';
+$app_types = explode(',', $app['application_type']);
+$is_need_based = in_array('need_scholarship', $app_types);
+$is_mission_based = in_array('mission_discount', $app_types);
 $documentation = $app['documentation_files'] ? json_decode($app['documentation_files'], true) : [];
 
 $page_title = $app['first_name'] . ' ' . $app['last_name'] . ' - Application';
@@ -93,7 +105,23 @@ include 'includes/header.php';
                 <?php endif; ?>
             </form>
 
-            <form method="POST" style="flex:2; min-width:300px;">
+            <form method="POST" style="flex:1; min-width:200px;">
+                <input type="hidden" name="action" value="update_scholarship_amount">
+                <?= csrf_field() ?>
+                <label class="form-label" style="font-weight:600;">Scholarship Amount</label>
+                <div style="display:flex; gap:8px;">
+                    <select name="scholarship_amount" class="form-select">
+                        <option value="" <?= empty($app['scholarship_amount']) ? 'selected' : '' ?>>None</option>
+                        <option value="295" <?= ($app['scholarship_amount'] ?? '') === '295' ? 'selected' : '' ?>>$295/mo</option>
+                        <option value="395" <?= ($app['scholarship_amount'] ?? '') === '395' ? 'selected' : '' ?>>$395/mo</option>
+                        <option value="495" <?= ($app['scholarship_amount'] ?? '') === '495' ? 'selected' : '' ?>>$495/mo</option>
+                    </select>
+                    <button type="submit" class="btn">Set</button>
+                </div>
+            </form>
+        </div>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: end; margin-top:15px;">
+            <form method="POST" style="flex:1; min-width:300px;">
                 <input type="hidden" name="action" value="update_notes">
                 <?= csrf_field() ?>
                 <label class="form-label" style="font-weight:600;">Admin Notes</label>
@@ -109,12 +137,16 @@ include 'includes/header.php';
     <div style="text-align:center; margin-bottom:25px;">
         <h2 style="margin:0;"><?= htmlspecialchars($app['first_name'] . ' ' . $app['last_name']) ?></h2>
         <div style="margin-top:8px;">
-            <?php if ($is_need_based): ?>
-                <span class="badge-type badge-need" style="font-size:1em; padding:5px 12px;">Need-Based Scholarship</span>
-            <?php else: ?>
+            <?php if ($is_mission_based): ?>
                 <span class="badge-type badge-mission" style="font-size:1em; padding:5px 12px;">Mission-Based Discount</span>
             <?php endif; ?>
+            <?php if ($is_need_based): ?>
+                <span class="badge-type badge-need" style="font-size:1em; padding:5px 12px;">Need-Based Scholarship</span>
+            <?php endif; ?>
             <span class="badge-status badge-<?= $app['status'] ?>" style="margin-left:8px;"><?= ucwords(str_replace('_', ' ', $app['status'])) ?></span>
+            <?php if (!empty($app['scholarship_amount'])): ?>
+                <span style="margin-left:8px; background:#28a745; color:white; padding:3px 10px; border-radius:4px; font-size:0.9em;">$<?= htmlspecialchars($app['scholarship_amount']) ?>/mo</span>
+            <?php endif; ?>
         </div>
         <small class="text-muted">Submitted <?= date('F j, Y \a\t g:i A', strtotime($app['created_at'])) ?></small>
     </div>
@@ -258,6 +290,23 @@ include 'includes/header.php';
                        target="_blank" class="btn btn-small btn-info" style="margin-left:auto;">Download</a>
                 </div>
             <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Signature & Agreement -->
+    <?php if (!empty($app['signature_name'])): ?>
+    <div class="detail-section">
+        <div class="detail-section-header">Signature &amp; Agreement</div>
+        <div class="detail-section-body">
+            <div class="detail-row">
+                <div class="detail-label">Signature</div>
+                <div class="detail-value" style="font-family:'Dancing Script',cursive; font-size:1.5em;"><?= htmlspecialchars($app['signature_name']) ?></div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Terms Agreed</div>
+                <div class="detail-value"><?= !empty($app['tos_agreed']) ? '<span style="color:#28a745; font-weight:600;">Yes</span>' : '<span style="color:#dc3545;">No</span>' ?></div>
+            </div>
         </div>
     </div>
     <?php endif; ?>

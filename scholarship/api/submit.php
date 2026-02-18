@@ -23,10 +23,13 @@ if (empty($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || !hash_equa
 // --- Validation ---
 $errors = [];
 
-$application_type = trim($_POST['application_type'] ?? '');
-if (!in_array($application_type, ['mission_discount', 'need_scholarship'])) {
-    $errors[] = 'Please select a valid application type.';
+$application_types = $_POST['application_type'] ?? [];
+if (!is_array($application_types)) $application_types = [$application_types];
+$application_types = array_intersect($application_types, ['mission_discount', 'need_scholarship']);
+if (empty($application_types)) {
+    $errors[] = 'Please select at least one application type.';
 }
+$application_type = implode(',', $application_types);
 
 $first_name = trim($_POST['first_name'] ?? '');
 $last_name = trim($_POST['last_name'] ?? '');
@@ -152,6 +155,10 @@ $is_coach = isset($_POST['is_coach']) ? 1 : 0;
 $is_entrepreneur = isset($_POST['is_entrepreneur']) ? 1 : 0;
 $employer_name = trim($_POST['employer_name'] ?? '');
 
+// Signature and TOS
+$signature_name = trim($_POST['signature_name'] ?? '');
+$tos_agreed = isset($_POST['tos_agree']) ? 1 : 0;
+
 // --- Insert into database ---
 try {
     $stmt = $pdo->prepare("
@@ -169,7 +176,8 @@ try {
             has_children_under_18, children_names_ages,
             additional_info,
             is_educator, is_nonprofit, is_coach, is_entrepreneur,
-            employer_name, essay, documentation_files
+            employer_name, essay, documentation_files,
+            signature_name, tos_agreed
         ) VALUES (
             :unique_id, :application_type,
             :first_name, :last_name, :email,
@@ -184,7 +192,8 @@ try {
             :has_children_under_18, :children_names_ages,
             :additional_info,
             :is_educator, :is_nonprofit, :is_coach, :is_entrepreneur,
-            :employer_name, :essay, :documentation_files
+            :employer_name, :essay, :documentation_files,
+            :signature_name, :tos_agreed
         )
     ");
 
@@ -224,7 +233,9 @@ try {
         'is_entrepreneur' => $is_entrepreneur,
         'employer_name' => $employer_name,
         'essay' => $essay,
-        'documentation_files' => !empty($uploaded_files) ? json_encode($uploaded_files) : null
+        'documentation_files' => !empty($uploaded_files) ? json_encode($uploaded_files) : null,
+        'signature_name' => $signature_name,
+        'tos_agreed' => $tos_agreed
     ]);
 
 } catch (PDOException $e) {

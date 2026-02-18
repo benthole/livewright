@@ -25,11 +25,14 @@ $csrf_token = $_SESSION['csrf_token'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LiveMORE Scholarship Application - Wright Foundation</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
     <style>
         :root {
             --lw-blue: #007cba;
             --lw-blue-dark: #005f8a;
             --lw-green: #28a745;
+            --lw-purple: #8c84bb;
+            --lw-purple-dark: #53367f;
         }
 
         body {
@@ -39,10 +42,15 @@ $csrf_token = $_SESSION['csrf_token'];
         }
 
         .app-header {
-            background: linear-gradient(135deg, var(--lw-blue), var(--lw-blue-dark));
+            background: linear-gradient(135deg, var(--lw-purple), var(--lw-purple-dark));
             color: white;
             padding: 40px 0;
             text-align: center;
+        }
+
+        .app-header img.header-logo {
+            max-width: 220px;
+            margin-bottom: 15px;
         }
 
         .app-header h1 {
@@ -117,7 +125,7 @@ $csrf_token = $_SESSION['csrf_token'];
             background: #e8f4fd;
         }
 
-        .type-card input[type="radio"] {
+        .type-card input[type="checkbox"] {
             display: none;
         }
 
@@ -130,48 +138,6 @@ $csrf_token = $_SESSION['csrf_token'];
             margin: 0;
             font-size: 0.9em;
             color: #666;
-        }
-
-        /* Expense toggle rows */
-        .expense-row {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 12px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .expense-row:last-child {
-            border-bottom: none;
-        }
-
-        .expense-label {
-            flex: 1;
-            font-weight: 500;
-        }
-
-        .expense-toggle {
-            display: flex;
-            gap: 8px;
-        }
-
-        .expense-toggle .btn {
-            padding: 4px 16px;
-            font-size: 0.85em;
-        }
-
-        .expense-toggle .btn-outline-secondary.active {
-            background: var(--lw-blue);
-            border-color: var(--lw-blue);
-            color: white;
-        }
-
-        .expense-detail {
-            width: 200px;
-        }
-
-        .expense-detail input {
-            font-size: 0.9em;
         }
 
         /* File upload zone */
@@ -278,6 +244,64 @@ $csrf_token = $_SESSION['csrf_token'];
             display: none;
         }
 
+        /* Signature area */
+        .signature-area {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .signature-affirmation {
+            font-size: 0.9em;
+            color: #555;
+            font-style: italic;
+            margin-bottom: 15px;
+        }
+
+        .signature-preview {
+            font-family: 'Dancing Script', cursive;
+            font-size: 2em;
+            color: #333;
+            min-height: 50px;
+            padding: 10px 0;
+            border-bottom: 2px solid #333;
+            margin-top: 10px;
+        }
+
+        /* Terms of Service */
+        .tos-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .tos-notice {
+            font-size: 0.95em;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .tos-scroll-box {
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 20px;
+            max-height: 250px;
+            overflow-y: auto;
+            background: #fafafa;
+            font-size: 0.9em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .tos-scroll-box h5 {
+            font-size: 1em;
+            margin-top: 15px;
+        }
+
+        .tos-scroll-box h5:first-child {
+            margin-top: 0;
+        }
+
         @media (max-width: 768px) {
             .type-cards {
                 grid-template-columns: 1fr;
@@ -306,6 +330,7 @@ $csrf_token = $_SESSION['csrf_token'];
 
 <div class="app-header">
     <div class="container">
+        <img src="https://livewright.com/wp-content/uploads/2024/02/LiveWright-logo–RGB_white.png" alt="LiveWright" class="header-logo">
         <h1>LiveMORE Scholarship Application</h1>
         <p>The Wright Foundation is committed to making transformational education accessible. Apply for a mission-based discount or need-based scholarship below.</p>
     </div>
@@ -321,14 +346,15 @@ $csrf_token = $_SESSION['csrf_token'];
 
         <!-- Section 1: Application Type -->
         <h3 class="section-title">Application Type</h3>
+        <p class="text-muted mb-2">Select all that apply</p>
         <div class="type-cards">
             <label class="type-card" id="card-mission">
-                <input type="radio" name="application_type" value="mission_discount" required>
+                <input type="checkbox" name="application_type[]" value="mission_discount">
                 <h4>Mission-Based Discount</h4>
                 <p>For educators, nonprofit professionals, coaches, and entrepreneurs advancing human potential.</p>
             </label>
             <label class="type-card" id="card-need">
-                <input type="radio" name="application_type" value="need_scholarship">
+                <input type="checkbox" name="application_type[]" value="need_scholarship">
                 <h4>Need-Based Scholarship</h4>
                 <p>For applicants who require financial assistance to participate in the LiveMORE program.</p>
             </label>
@@ -381,6 +407,7 @@ $csrf_token = $_SESSION['csrf_token'];
 
         <!-- Section 3: Capacity-Based Scholarship (need-based only) -->
         <div id="needBasedSection" class="conditional-section">
+            <div style="margin-top: 30px;"></div>
             <h3 class="section-title">Financial Information</h3>
             <p class="text-muted mb-3">This information helps us assess your scholarship eligibility. All information is kept strictly confidential.</p>
 
@@ -407,86 +434,6 @@ $csrf_token = $_SESSION['csrf_token'];
                 <div class="col-12">
                     <label for="other_assets_income" class="form-label">Other Assets That Generate Income</label>
                     <textarea class="form-control" id="other_assets_income" name="other_assets_income" rows="2" placeholder="Real estate, business ownership, etc."></textarea>
-                </div>
-            </div>
-
-            <h5 class="mt-4 mb-3">Expenses</h5>
-
-            <!-- Alimony -->
-            <div class="expense-row">
-                <span class="expense-label">Do you pay alimony or child support?</span>
-                <div class="expense-toggle" data-field="alimony">
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-yes">Yes</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-no active">No</button>
-                </div>
-                <div class="expense-detail" style="display:none;">
-                    <input type="hidden" name="has_alimony" value="0">
-                    <input type="text" class="form-control form-control-sm" name="alimony_percent" placeholder="% of income">
-                </div>
-            </div>
-
-            <!-- Student Loans -->
-            <div class="expense-row">
-                <span class="expense-label">Do you have student loans?</span>
-                <div class="expense-toggle" data-field="student_loans">
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-yes">Yes</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-no active">No</button>
-                </div>
-                <div class="expense-detail" style="display:none;">
-                    <input type="hidden" name="has_student_loans" value="0">
-                    <input type="text" class="form-control form-control-sm" name="student_loan_monthly" placeholder="Monthly payment">
-                </div>
-            </div>
-
-            <!-- Medical Expenses -->
-            <div class="expense-row">
-                <span class="expense-label">Do you have significant medical expenses?</span>
-                <div class="expense-toggle" data-field="medical_expenses">
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-yes">Yes</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-no active">No</button>
-                </div>
-                <div class="expense-detail" style="display:none;">
-                    <input type="hidden" name="has_medical_expenses" value="0">
-                    <input type="text" class="form-control form-control-sm" name="medical_expenses_monthly" placeholder="Monthly amount">
-                </div>
-            </div>
-
-            <!-- Familial Support -->
-            <div class="expense-row">
-                <span class="expense-label">Do you support family members financially?</span>
-                <div class="expense-toggle" data-field="familial_support">
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-yes">Yes</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-no active">No</button>
-                </div>
-                <div class="expense-detail" style="display:none;">
-                    <input type="hidden" name="has_familial_support" value="0">
-                    <input type="text" class="form-control form-control-sm" name="familial_support_monthly" placeholder="Monthly amount">
-                </div>
-            </div>
-
-            <!-- Dependent in College -->
-            <div class="expense-row">
-                <span class="expense-label">Do you have dependents in college?</span>
-                <div class="expense-toggle" data-field="dependent_college">
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-yes">Yes</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-no active">No</button>
-                </div>
-                <div class="expense-detail" style="display:none;">
-                    <input type="hidden" name="has_dependent_college" value="0">
-                    <input type="text" class="form-control form-control-sm" name="dependent_college_count" placeholder="How many?">
-                </div>
-            </div>
-
-            <!-- Children Under 18 -->
-            <div class="expense-row">
-                <span class="expense-label">Do you have children under 18?</span>
-                <div class="expense-toggle" data-field="children_under_18">
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-yes">Yes</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-no active">No</button>
-                </div>
-                <div class="expense-detail" style="display:none;">
-                    <input type="hidden" name="has_children_under_18" value="0">
-                    <input type="text" class="form-control form-control-sm" name="children_names_ages" placeholder="Names and ages">
                 </div>
             </div>
 
@@ -527,14 +474,14 @@ $csrf_token = $_SESSION['csrf_token'];
 
         <div class="mb-3">
             <label for="essay" class="form-label required">Tell us about your mission</label>
-            <p class="text-muted small">How will participating in the LiveMORE program help you advance your mission and make a greater impact in the world?</p>
+            <p class="text-muted small">What does your mission mean to you, how did you come to that mission, and how do you imagine the LiveMORE program or other LiveWright services will enhance your mission delivery?</p>
             <textarea class="form-control" id="essay" name="essay" rows="6" required placeholder="Share your story, your mission, and how this program would help you create greater impact..."></textarea>
         </div>
 
         <!-- Documentation Upload -->
         <div class="mb-3">
-            <label class="form-label">Supporting Documentation <span class="text-muted">(optional)</span></label>
-            <p class="text-muted small">Upload any supporting documents such as pay stubs, tax returns, or letters of recommendation. PDF, JPG, or PNG files up to 10MB each.</p>
+            <label class="form-label">Upload any supporting documents <span class="text-muted">(optional)</span></label>
+            <p class="text-muted small">PDF, JPG, or PNG files up to 10MB each.</p>
             <div class="upload-zone" id="uploadZone">
                 <div class="icon">&#128206;</div>
                 <p><strong>Click to select files</strong> or drag and drop</p>
@@ -542,6 +489,44 @@ $csrf_token = $_SESSION['csrf_token'];
             </div>
             <input type="file" id="fileInput" name="documentation[]" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none;">
             <div class="file-list" id="fileList"></div>
+        </div>
+
+        <!-- Terms of Service -->
+        <div class="tos-section">
+            <h3 class="section-title">Terms &amp; Conditions</h3>
+            <p class="tos-notice">Please note that there is a minimum standard of participation we expect from scholarship recipients in order to keep your scholarship. That information is below.</p>
+            <div class="tos-scroll-box" id="tosBox">
+                <h5>1. Scholarship Participation Requirements</h5>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+
+                <h5>2. Attendance &amp; Engagement</h5>
+                <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+
+                <h5>3. Program Conduct</h5>
+                <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.</p>
+
+                <h5>4. Scholarship Continuation</h5>
+                <p>At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga.</p>
+
+                <h5>5. Revocation Policy</h5>
+                <p>Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae.</p>
+
+                <h5>6. Confidentiality</h5>
+                <p>Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat. Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.</p>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="tos_agree" name="tos_agree" value="1" required>
+                <label class="form-check-label" for="tos_agree">I have read and agree to the Terms &amp; Conditions above</label>
+            </div>
+        </div>
+
+        <!-- Signature -->
+        <div class="signature-area">
+            <h3 class="section-title">Signature</h3>
+            <p class="signature-affirmation">Your submission of this form with your name and data affirms that the information is complete, true, and accurate at the time of submission.</p>
+            <label for="signature_name" class="form-label required">Type your full name</label>
+            <input type="text" class="form-control" id="signature_name" name="signature_name" required placeholder="Your full name">
+            <div class="signature-preview" id="signaturePreview"></div>
         </div>
 
         <!-- Submit -->
@@ -561,41 +546,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const validationAlert = document.getElementById('validationAlert');
     const submitBtn = document.getElementById('submitBtn');
 
-    // Application type selection
+    // Application type selection (checkboxes - can select both)
     typeCards.forEach(function(card) {
-        card.addEventListener('click', function() {
-            typeCards.forEach(function(c) { c.classList.remove('selected'); });
-            card.classList.add('selected');
-            card.querySelector('input[type="radio"]').checked = true;
+        card.addEventListener('click', function(e) {
+            var checkbox = card.querySelector('input[type="checkbox"]');
+            // Toggle this card's selected state
+            checkbox.checked = !checkbox.checked;
+            card.classList.toggle('selected', checkbox.checked);
 
-            if (card.querySelector('input').value === 'need_scholarship') {
+            // Show need-based section if need checkbox is checked
+            var needCheckbox = document.querySelector('#card-need input[type="checkbox"]');
+            if (needCheckbox.checked) {
                 needSection.classList.add('visible');
             } else {
                 needSection.classList.remove('visible');
             }
-        });
-    });
 
-    // Expense yes/no toggles
-    document.querySelectorAll('.expense-toggle').forEach(function(toggle) {
-        var row = toggle.closest('.expense-row');
-        var detail = row.querySelector('.expense-detail');
-        var hidden = detail.querySelector('input[type="hidden"]');
-        var yesBtn = toggle.querySelector('.toggle-yes');
-        var noBtn = toggle.querySelector('.toggle-no');
-
-        yesBtn.addEventListener('click', function() {
-            yesBtn.classList.add('active');
-            noBtn.classList.remove('active');
-            detail.style.display = '';
-            hidden.value = '1';
-        });
-
-        noBtn.addEventListener('click', function() {
-            noBtn.classList.add('active');
-            yesBtn.classList.remove('active');
-            detail.style.display = 'none';
-            hidden.value = '0';
+            e.preventDefault();
         });
     });
 
@@ -680,24 +647,35 @@ document.addEventListener('DOMContentLoaded', function() {
         return div.innerHTML;
     }
 
+    // Signature live preview
+    var signatureInput = document.getElementById('signature_name');
+    var signaturePreview = document.getElementById('signaturePreview');
+    signatureInput.addEventListener('input', function() {
+        signaturePreview.textContent = this.value;
+    });
+
     // Client-side validation
     form.addEventListener('submit', function(e) {
         var errors = [];
 
-        if (!form.querySelector('input[name="application_type"]:checked')) {
-            errors.push('Please select an application type.');
+        if (!form.querySelector('input[name="application_type[]"]:checked')) {
+            errors.push('Please select at least one application type.');
         }
 
         var firstName = form.querySelector('#first_name').value.trim();
         var lastName = form.querySelector('#last_name').value.trim();
         var email = form.querySelector('#email').value.trim();
         var essay = form.querySelector('#essay').value.trim();
+        var signature = form.querySelector('#signature_name').value.trim();
+        var tosAgree = form.querySelector('#tos_agree').checked;
 
         if (!firstName) errors.push('First name is required.');
         if (!lastName) errors.push('Last name is required.');
         if (!email) errors.push('Email address is required.');
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Please enter a valid email address.');
         if (!essay) errors.push('The mission essay is required.');
+        if (!tosAgree) errors.push('You must agree to the Terms & Conditions.');
+        if (!signature) errors.push('Please type your name as a signature.');
 
         if (errors.length > 0) {
             e.preventDefault();
