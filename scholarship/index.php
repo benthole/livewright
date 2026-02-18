@@ -496,23 +496,17 @@ $csrf_token = $_SESSION['csrf_token'];
             <h3 class="section-title">Terms &amp; Conditions</h3>
             <p class="tos-notice">Please note that there is a minimum standard of participation we expect from scholarship recipients in order to keep your scholarship. That information is below.</p>
             <div class="tos-scroll-box" id="tosBox">
-                <h5>1. Scholarship Participation Requirements</h5>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+                <h5>1. Eligibility &amp; Application</h5>
+                <p>Scholarship recipients must submit a completed application demonstrating financial need. Scholarships are granted on a quarterly basis and recipients may be required to reapply each quarter to maintain eligibility.</p>
 
-                <h5>2. Attendance &amp; Engagement</h5>
-                <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                <h5>2. Program Format</h5>
+                <p>Scholarship recipients receive access to group coaching only, consisting of approximately 60&ndash;90 minutes of live sessions each week.</p>
 
-                <h5>3. Program Conduct</h5>
-                <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.</p>
+                <h5>3. Attendance Requirements</h5>
+                <p>Recipients are required to attend a minimum of 80% of each quarter's weekly lessons and group coaching sessions. Failure to meet this attendance threshold may result in the loss of your scholarship for the following quarter.</p>
 
-                <h5>4. Scholarship Continuation</h5>
-                <p>At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga.</p>
-
-                <h5>5. Revocation Policy</h5>
-                <p>Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae.</p>
-
-                <h5>6. Confidentiality</h5>
-                <p>Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat. Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.</p>
+                <h5>4. Growth Report Submissions</h5>
+                <p>Recipients must submit at least 80% of each quarter's weekly growth reports. These reports should demonstrate what you are learning and how you are growing through the program. Consistent engagement and reflection are essential to maintaining your scholarship.</p>
             </div>
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="tos_agree" name="tos_agree" value="1" required>
