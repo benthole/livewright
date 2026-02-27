@@ -193,8 +193,8 @@ include 'includes/header.php';
             <h5 style="margin-top:0; margin-bottom:15px; color:#555;">Income</h5>
             <?php
             $income_fields = [
-                'Gross Annual Income' => $app['gross_income'] ? '$' . htmlspecialchars($app['gross_income']) : '',
-                "Spouse's Gross Income" => $app['gross_income_spouse'] ? '$' . htmlspecialchars($app['gross_income_spouse']) : '',
+                'Gross Household Income' => $app['gross_household_income'] ? '$' . htmlspecialchars($app['gross_household_income']) : '',
+                'Number of Dependents' => $app['dependents'] ?? '',
                 'Other Income Sources' => $app['other_income_sources'],
                 'Other Assets/Income' => $app['other_assets_income'],
             ];

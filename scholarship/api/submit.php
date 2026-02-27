@@ -128,8 +128,8 @@ $work_phone = trim($_POST['work_phone'] ?? '');
 $other_phone = trim($_POST['other_phone'] ?? '');
 
 // Income fields (need-based only)
-$gross_income = trim($_POST['gross_income'] ?? '');
-$gross_income_spouse = trim($_POST['gross_income_spouse'] ?? '');
+$gross_household_income = trim($_POST['gross_household_income'] ?? '');
+$dependents = trim($_POST['dependents'] ?? '');
 $other_income_sources = trim($_POST['other_income_sources'] ?? '');
 $other_assets_income = trim($_POST['other_assets_income'] ?? '');
 
@@ -167,7 +167,7 @@ try {
             first_name, last_name, email,
             street_address, city, state_zip, country,
             cell_phone, work_phone, other_phone,
-            gross_income, gross_income_spouse, other_income_sources, other_assets_income,
+            gross_household_income, dependents, other_income_sources, other_assets_income,
             has_alimony, alimony_percent,
             has_student_loans, student_loan_monthly,
             has_medical_expenses, medical_expenses_monthly,
@@ -183,7 +183,7 @@ try {
             :first_name, :last_name, :email,
             :street_address, :city, :state_zip, :country,
             :cell_phone, :work_phone, :other_phone,
-            :gross_income, :gross_income_spouse, :other_income_sources, :other_assets_income,
+            :gross_household_income, :dependents, :other_income_sources, :other_assets_income,
             :has_alimony, :alimony_percent,
             :has_student_loans, :student_loan_monthly,
             :has_medical_expenses, :medical_expenses_monthly,
@@ -210,8 +210,8 @@ try {
         'cell_phone' => $cell_phone,
         'work_phone' => $work_phone,
         'other_phone' => $other_phone,
-        'gross_income' => $gross_income,
-        'gross_income_spouse' => $gross_income_spouse,
+        'gross_household_income' => $gross_household_income,
+        'dependents' => $dependents,
         'other_income_sources' => $other_income_sources,
         'other_assets_income' => $other_assets_income,
         'has_alimony' => $has_alimony,

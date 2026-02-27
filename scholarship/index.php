@@ -414,18 +414,15 @@ $csrf_token = $_SESSION['csrf_token'];
             <h5 class="mt-3 mb-3">Income</h5>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label for="gross_income" class="form-label">Your Gross Annual Income</label>
+                    <label for="gross_household_income" class="form-label">Gross Household Income</label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
-                        <input type="text" class="form-control" id="gross_income" name="gross_income" placeholder="0">
+                        <input type="text" class="form-control" id="gross_household_income" name="gross_household_income" placeholder="0">
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <label for="gross_income_spouse" class="form-label">Spouse's Gross Annual Income</label>
-                    <div class="input-group">
-                        <span class="input-group-text">$</span>
-                        <input type="text" class="form-control" id="gross_income_spouse" name="gross_income_spouse" placeholder="0">
-                    </div>
+                    <label for="dependents" class="form-label">Number of Dependents</label>
+                    <input type="text" class="form-control" id="dependents" name="dependents" placeholder="0">
                 </div>
                 <div class="col-12">
                     <label for="other_income_sources" class="form-label">Other Sources of Income</label>
