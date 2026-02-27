@@ -23,7 +23,7 @@ $csrf_token = $_SESSION['csrf_token'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LiveMORE Scholarship Application - Wright Foundation</title>
+    <title>LiveMORE Scholarship Application - LiveWright</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
     <style>
@@ -332,7 +332,7 @@ $csrf_token = $_SESSION['csrf_token'];
     <div class="container">
         <img src="https://livewright.com/wp-content/uploads/2024/02/LiveWright-logo–RGB_white.png" alt="LiveWright" class="header-logo">
         <h1>LiveMORE Scholarship Application</h1>
-        <p>The Wright Foundation is committed to making transformational education accessible. Apply for a mission-based discount or need-based scholarship below.</p>
+        <p>LiveWright is committed to making transformational education accessible. Apply for a mission-based discount or need-based scholarship below.</p>
     </div>
 </div>
 
