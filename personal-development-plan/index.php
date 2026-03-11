@@ -323,23 +323,29 @@ if (empty($uid)) {
                     <h3>Available Options</h3>
                     
                     <?php foreach ($options as $option_number => $sub_options): ?>
-                        <?php 
+                        <?php
                         // Get the description from the first sub-option
                         $first_sub = reset($sub_options);
                         $description = $first_sub[0]['description'];
-                        
+
+                        // Extract option title from first <strong> tag in description
+                        $option_title = "Option $option_number";
+                        if (preg_match('/<strong>(.*?)<\/strong>/', $description, $matches)) {
+                            $option_title = "Option $option_number: " . strip_tags($matches[1]);
+                        }
+
                         // Check if this option has sub-options (more than just "Default")
                         // Has sub-options if: more than 1 sub_option_name OR the single one isn't named "Default"
                         $has_sub_options = (count($sub_options) > 1) || (count($sub_options) === 1 && !isset($sub_options['Default']));
-                        
+
                         // Get minimum commitment months
                         $minimum_field = "option_{$option_number}_minimum_months";
                         $minimum_months = $contract[$minimum_field] ?? 1;
                         ?>
-                        
+
                         <div class="option-section">
                             <div class="option-header">
-                                <h3 style="margin: 0;">Option <?= $option_number ?></h3>
+                                <h3 style="margin: 0;"><?= htmlspecialchars($option_title) ?></h3>
                             </div>
                             <div class="option-content">
                                 <div><?= $description ?></div>
@@ -374,7 +380,7 @@ if (empty($uid)) {
                                                         <div class="pricing-tier recommended" onclick="selectOption(<?= $yearly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($yearly_tier['description'])) ?>', <?= $yearly_tier['price'] ?>, '<?= $yearly_tier['type'] ?>', '<?= htmlspecialchars(addslashes($sub_name)) ?>')">
                                                             <div class="sub-option-label"><?= htmlspecialchars($sub_name) ?></div>
                                                             <div class="price">$<?= number_format($yearly_tier['price'], 2) ?></div>
-                                                            <div class="type">one-time payment</div>
+                                                            <div class="type">one-time payment for 12 months of coaching</div>
                                                             <?php if ($savings): ?>
                                                                 <div class="price-discount">Save $<?= number_format($savings['savings'], 2) ?></div>
                                                                 <div class="price-details">vs 12 monthly payments</div>
@@ -396,7 +402,7 @@ if (empty($uid)) {
                                                         <div class="pricing-tier" onclick="selectOption(<?= $monthly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($monthly_tier['description'])) ?>', <?= $monthly_tier['price'] ?>, '<?= $monthly_tier['type'] ?>', '<?= htmlspecialchars(addslashes($sub_name)) ?>')">
                                                             <div class="sub-option-label"><?= htmlspecialchars($sub_name) ?></div>
                                                             <div class="price">$<?= number_format($monthly_tier['price'], 2) ?></div>
-                                                            <div class="type">per month</div>
+                                                            <div class="type">monthly for 12 months</div>
                                                             <div class="price-details">12 payments of $<?= number_format($monthly_tier['price'], 2) ?></div>
                                                             <?php
                                                             $deposit = (float)($monthly_tier['deposit_amount'] ?? 0);
@@ -424,7 +430,7 @@ if (empty($uid)) {
                                                         <div class="pricing-tier" onclick="selectOption(<?= $quarterly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($quarterly_tier['description'])) ?>', <?= $quarterly_tier['price'] ?>, '<?= $quarterly_tier['type'] ?>', '<?= htmlspecialchars(addslashes($sub_name)) ?>')">
                                                             <div class="sub-option-label"><?= htmlspecialchars($sub_name) ?></div>
                                                             <div class="price">$<?= number_format($quarterly_tier['price'], 2) ?></div>
-                                                            <div class="type">per quarter</div>
+                                                            <div class="type">quarterly over the next 12 months</div>
                                                             <div class="price-details">4 payments of $<?= number_format($quarterly_tier['price'], 2) ?></div>
                                                         </div>
                                                     <?php endif; ?>
@@ -457,7 +463,7 @@ if (empty($uid)) {
                                                 <div class="pricing-tier recommended" onclick="selectOption(<?= $yearly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($yearly_tier['description'])) ?>', <?= $yearly_tier['price'] ?>, '<?= $yearly_tier['type'] ?>')">
                                                     <h4>Pay in Full <span class="best-value-badge">Best Value</span></h4>
                                                     <div class="price">$<?= number_format($yearly_tier['price'], 2) ?></div>
-                                                    <div class="type">one-time payment</div>
+                                                    <div class="type">one-time payment for 12 months of coaching</div>
                                                     <?php if ($savings): ?>
                                                         <div class="price-discount">Save $<?= number_format($savings['savings'], 2) ?></div>
                                                         <div class="price-details">vs 12 monthly payments</div>
@@ -470,7 +476,7 @@ if (empty($uid)) {
                                                 <div class="pricing-tier" onclick="selectOption(<?= $monthly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($monthly_tier['description'])) ?>', <?= $monthly_tier['price'] ?>, '<?= $monthly_tier['type'] ?>')">
                                                     <h4>Monthly Payments</h4>
                                                     <div class="price">$<?= number_format($monthly_tier['price'], 2) ?></div>
-                                                    <div class="type">per month</div>
+                                                    <div class="type">monthly for 12 months</div>
                                                     <div class="price-details">12 payments of $<?= number_format($monthly_tier['price'], 2) ?></div>
                                                     <?php
                                                     $m_deposit = (float)($monthly_tier['deposit_amount'] ?? 0);
@@ -487,7 +493,7 @@ if (empty($uid)) {
                                                 <div class="pricing-tier" onclick="selectOption(<?= $quarterly_tier['id'] ?>, 'Option <?= $option_number ?>', '<?= htmlspecialchars(addslashes($quarterly_tier['description'])) ?>', <?= $quarterly_tier['price'] ?>, '<?= $quarterly_tier['type'] ?>')">
                                                     <h4>Quarterly</h4>
                                                     <div class="price">$<?= number_format($quarterly_tier['price'], 2) ?></div>
-                                                    <div class="type">per quarter</div>
+                                                    <div class="type">quarterly over the next 12 months</div>
                                                     <div class="price-details">4 payments of $<?= number_format($quarterly_tier['price'], 2) ?></div>
                                                 </div>
                                             </div>
@@ -557,8 +563,7 @@ if (empty($uid)) {
 
                     <!-- Footnotes -->
                     <div style="margin-top: 25px; padding: 15px 20px; color: #666; font-size: 0.85em; line-height: 1.6; border-top: 1px solid #eee;">
-                        <p style="margin: 0 0 5px 0;">* Financial aid is available for those who demonstrate need and are committed to fully engaging their growth capacity.</p>
-                        <p style="margin: 0;">**Payment plans available.</p>
+                        <p style="margin: 0;">* Financial aid is available for those who demonstrate need and are committed to fully engaging their growth capacity.</p>
                     </div>
 
                     <!-- SINGLE FORM SECTION -->
@@ -664,7 +669,14 @@ if (empty($uid)) {
 
         document.getElementById('selected-option-name').textContent = displayName;
         document.getElementById('selected-price').textContent = parseFloat(price).toFixed(2);
-        document.getElementById('selected-type').textContent = type.toLowerCase();
+
+        // Friendly type labels
+        const typeLabels = {
+            'Yearly': 'one-time payment for 12 months of coaching',
+            'Monthly': 'monthly for 12 months',
+            'Quarterly': 'quarterly over the next 12 months'
+        };
+        document.getElementById('selected-type').textContent = typeLabels[type] || type.toLowerCase();
 
         // Show selected option display
         document.getElementById('selected-option-display').style.display = 'block';
@@ -691,7 +703,7 @@ if (empty($uid)) {
             cartHTML += `
                 <div class="cart-item">
                     <div class="cart-item-name">${selectedOption.name}</div>
-                    <div class="cart-item-price">$${selectedOption.price.toFixed(2)} <span class="cart-item-type">${selectedOption.type.toLowerCase()}</span></div>
+                    <div class="cart-item-price">$${selectedOption.price.toFixed(2)} <span class="cart-item-type">${{'Yearly':'one-time','Monthly':'monthly for 12 mo','Quarterly':'quarterly for 12 mo'}[selectedOption.type] || selectedOption.type.toLowerCase()}</span></div>
                 </div>
             `;
         }

@@ -44,6 +44,14 @@ if (empty($payment_option_id) || empty($contract_uid) || empty($first_name) || e
 $plan_price = (float)($selected_option['price'] ?? 0);
 $plan_type = $selected_option['type'] ?? 'Monthly';
 $deposit_amount = 100.00; // Fixed $100 deposit option
+
+// Friendly type labels
+$type_labels = [
+    'Yearly' => 'one-time payment for 12 months of coaching',
+    'Monthly' => 'monthly for 12 months',
+    'Quarterly' => 'quarterly over the next 12 months',
+];
+$friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
 ?>
 <!DOCTYPE html>
 <html>
@@ -162,7 +170,7 @@ $deposit_amount = 100.00; // Fixed $100 deposit option
                         <p><strong>Selected:</strong> <?= htmlspecialchars($selected_option['sub_option_name']) ?></p>
                     <?php endif; ?>
                     <div class="price-highlight">
-                        $<?= number_format($selected_option['price'], 2) ?> <?= strtolower($selected_option['type']) ?>
+                        $<?= number_format($selected_option['price'], 2) ?> — <?= $friendly_type ?>
                     </div>
                 </div>
 
@@ -260,7 +268,7 @@ $deposit_amount = 100.00; // Fixed $100 deposit option
                             <p><strong>Selected:</strong> <?= htmlspecialchars($selected_option['sub_option_name']) ?></p>
                         <?php endif; ?>
                         <div class="price-highlight">
-                            $<?= number_format($selected_option['price'], 2) ?> <?= strtolower($selected_option['type']) ?>
+                            $<?= number_format($selected_option['price'], 2) ?> — <?= $friendly_type ?>
                         </div>
                     </div>
 
