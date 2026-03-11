@@ -158,8 +158,8 @@ function pdp_keap_get_payment_session($contactId) {
         'contact_id' => $contactId
     ]);
 
-    if ($result['success'] && !empty($result['data']['key'])) {
-        return ['success' => true, 'session_key' => $result['data']['key'], 'error' => null];
+    if ($result['success'] && !empty($result['data']['session_key'])) {
+        return ['success' => true, 'session_key' => $result['data']['session_key'], 'error' => null];
     }
 
     return ['success' => false, 'session_key' => null, 'error' => $result['error'] ?? 'Failed to get payment session'];
