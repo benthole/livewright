@@ -555,6 +555,12 @@ if (empty($uid)) {
                         </div>
                     <?php endif; ?>
 
+                    <!-- Footnotes -->
+                    <div style="margin-top: 25px; padding: 15px 20px; color: #666; font-size: 0.85em; line-height: 1.6; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 5px 0;">* Financial aid is available for those who demonstrate need and are committed to fully engaging their growth capacity.</p>
+                        <p style="margin: 0;">**Payment plans available.</p>
+                    </div>
+
                     <!-- SINGLE FORM SECTION -->
                     <div class="selection-form">
                         <h3 id="form-title">Complete Your Selection</h3>

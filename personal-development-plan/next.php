@@ -41,31 +41,15 @@ if (empty($payment_option_id) || empty($contract_uid) || empty($first_name) || e
 }
 
 // Determine payment details
-$payment_mode = $selected_option['payment_mode'] ?? 'recurring_immediate';
-$deposit_amount = (float)($selected_option['deposit_amount'] ?? 0);
 $plan_price = (float)($selected_option['price'] ?? 0);
 $plan_type = $selected_option['type'] ?? 'Monthly';
-
-// Calculate what to charge now
-if ($payment_mode === 'deposit_only') {
-    $charge_now = $deposit_amount > 0 ? $deposit_amount : $plan_price;
-    $charge_label = 'One-time deposit';
-} elseif ($payment_mode === 'deposit_and_recurring') {
-    $charge_now = $deposit_amount > 0 ? $deposit_amount : $plan_price;
-    $charge_label = 'Deposit today';
-} else {
-    // recurring_immediate
-    $charge_now = $plan_price;
-    $charge_label = 'First ' . strtolower($plan_type) . ' payment';
-}
-
-$stripe_publishable_key = STRIPE_PUBLISHABLE_KEY;
+$deposit_amount = 100.00; // Fixed $100 deposit option
 ?>
 <!DOCTYPE html>
 <html>
 <head>
     <title>Confirm Your Selection - Personal Development Plan</title>
-    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://payments.keap.page/lib/payment-method-embed.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
         .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -82,6 +66,18 @@ $stripe_publishable_key = STRIPE_PUBLISHABLE_KEY;
         .button-group { display: flex; gap: 10px; margin-top: 20px; }
         .success-message { text-align: center; }
         .success-message h2 { color: #28a745; }
+
+        /* Payment Option Toggle */
+        .payment-toggle { background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .payment-toggle h3 { margin-top: 0; color: #333; margin-bottom: 15px; }
+        .toggle-option { display: flex; align-items: flex-start; gap: 12px; padding: 15px; border: 2px solid #ddd; border-radius: 6px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+        .toggle-option:hover { border-color: #007cba; background: #f0f8ff; }
+        .toggle-option.active { border-color: #28a745; background: #f0fff4; }
+        .toggle-option input[type="radio"] { margin-top: 3px; width: 18px; height: 18px; cursor: pointer; }
+        .toggle-option .option-details { flex: 1; }
+        .toggle-option .option-label { font-weight: bold; color: #333; font-size: 1.05em; }
+        .toggle-option .option-sublabel { color: #666; font-size: 0.9em; margin-top: 4px; }
+        .toggle-option .option-price { font-weight: bold; color: #28a745; font-size: 1.1em; white-space: nowrap; }
 
         /* Terms of Service Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
@@ -109,7 +105,7 @@ $stripe_publishable_key = STRIPE_PUBLISHABLE_KEY;
         .terms-link { color: #007cba; text-decoration: underline; cursor: pointer; }
         .terms-link:hover { color: #005a8c; }
 
-        /* Stripe Payment Section */
+        /* Payment Section */
         .payment-section { background: #f0f7ff; border: 2px solid #007cba; border-radius: 8px; padding: 25px; margin: 20px 0; }
         .payment-section h3 { margin-top: 0; color: #007cba; }
         .payment-summary { background: white; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
@@ -121,8 +117,8 @@ $stripe_publishable_key = STRIPE_PUBLISHABLE_KEY;
         .payment-summary .line-item.total .amount { color: #28a745; font-size: 1.2em; }
         .payment-summary .line-item.recurring { color: #666; font-size: 0.9em; }
 
-        #card-element { padding: 12px; border: 1px solid #ddd; border-radius: 4px; background: white; }
-        #card-errors { color: #dc3545; margin-top: 10px; font-size: 0.9em; }
+        #keap-payment-container { min-height: 80px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; background: white; }
+        #payment-errors { color: #dc3545; margin-top: 10px; font-size: 0.9em; }
         .pay-btn { background: #28a745; color: white; padding: 15px 30px; border: none; border-radius: 4px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px; }
         .pay-btn:hover { background: #218838; }
         .pay-btn:disabled { background: #ccc; cursor: not-allowed; }
@@ -134,6 +130,9 @@ $stripe_publishable_key = STRIPE_PUBLISHABLE_KEY;
 
         .secure-badge { text-align: center; margin-top: 15px; color: #666; font-size: 0.85em; }
         .secure-badge svg { vertical-align: middle; margin-right: 5px; }
+
+        .loading-indicator { text-align: center; padding: 20px; color: #666; }
+        .loading-indicator .spinner { border: 3px solid #ddd; border-top: 3px solid #007cba; }
     </style>
 </head>
 <body>
@@ -180,6 +179,27 @@ $stripe_publishable_key = STRIPE_PUBLISHABLE_KEY;
                     </div>
                 <?php endif; ?>
 
+                <!-- Payment Option Toggle: Pay in Full vs $100 Deposit -->
+                <div class="payment-toggle">
+                    <h3>Payment Option</h3>
+                    <label class="toggle-option active" id="toggle-pif" onclick="selectPaymentType('pif')">
+                        <input type="radio" name="payment_type" value="pif" checked>
+                        <div class="option-details">
+                            <div class="option-label">Pay in Full (Best Value)</div>
+                            <div class="option-sublabel">Complete payment for your selected plan</div>
+                        </div>
+                        <div class="option-price">$<?= number_format($plan_price, 2) ?></div>
+                    </label>
+                    <label class="toggle-option" id="toggle-deposit" onclick="selectPaymentType('deposit')">
+                        <input type="radio" name="payment_type" value="deposit">
+                        <div class="option-details">
+                            <div class="option-label">$100 Deposit</div>
+                            <div class="option-sublabel">Reserve your spot &mdash; remaining balance due before program starts</div>
+                        </div>
+                        <div class="option-price">$<?= number_format($deposit_amount, 2) ?></div>
+                    </label>
+                </div>
+
                 <div class="terms-agreement">
                     <label>
                         <input type="checkbox" id="termsCheckbox">
@@ -191,52 +211,46 @@ $stripe_publishable_key = STRIPE_PUBLISHABLE_KEY;
                 <div class="payment-section" id="paymentSection" style="display: none;">
                     <h3>Payment</h3>
 
-                    <div class="payment-summary">
+                    <div class="payment-summary" id="paymentSummary">
                         <div class="line-item">
-                            <span class="label"><?= htmlspecialchars($charge_label) ?></span>
-                            <span class="amount">$<?= number_format($charge_now, 2) ?></span>
+                            <span class="label" id="summaryLabel">Pay in Full</span>
+                            <span class="amount" id="summaryAmount">$<?= number_format($plan_price, 2) ?></span>
                         </div>
-                        <?php if ($payment_mode === 'deposit_and_recurring'): ?>
-                            <div class="line-item recurring">
-                                <span class="label">Then $<?= number_format($plan_price, 2) ?>/<?= strtolower($plan_type) ?> recurring</span>
-                                <span class="amount"></span>
-                            </div>
-                        <?php elseif ($payment_mode === 'recurring_immediate'): ?>
-                            <div class="line-item recurring">
-                                <span class="label">Recurring <?= strtolower($plan_type) ?></span>
-                                <span class="amount"></span>
-                            </div>
-                        <?php endif; ?>
                         <div class="line-item total">
                             <span class="label">Due Today</span>
-                            <span class="amount">$<?= number_format($charge_now, 2) ?></span>
+                            <span class="amount" id="summaryTotal">$<?= number_format($plan_price, 2) ?></span>
                         </div>
                     </div>
 
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Card Details</label>
-                    <div id="card-element"></div>
-                    <div id="card-errors" role="alert"></div>
+                    <div class="loading-indicator" id="widgetLoading">
+                        <span class="spinner"></span>
+                        <p>Loading secure payment form...</p>
+                    </div>
+
+                    <label style="display: none; margin-bottom: 8px; font-weight: bold;" id="cardLabel">Card Details</label>
+                    <div id="keap-payment-container" style="display: none;"></div>
+                    <div id="payment-errors" role="alert"></div>
 
                     <button type="button" class="pay-btn" id="payBtn" disabled onclick="handlePayment()">
-                        <span class="btn-text">Pay $<?= number_format($charge_now, 2) ?> & Sign Plan</span>
+                        <span class="btn-text" id="payBtnText">Pay $<?= number_format($plan_price, 2) ?> & Sign Plan</span>
                         <span class="spinner"></span>
                     </button>
 
                     <div class="secure-badge">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                        Payments are securely processed by Stripe
+                        Payments are securely processed
                     </div>
                 </div>
 
                 <div class="button-group">
-                    <a href="/?uid=<?= urlencode($contract_uid) ?>" class="back-btn">← Go Back</a>
+                    <a href="/?uid=<?= urlencode($contract_uid) ?>" class="back-btn">&larr; Go Back</a>
                 </div>
             </div>
 
             <!-- Success Section (hidden by default) -->
             <div class="content" id="success-section" style="display: none;">
                 <div class="success-message">
-                    <h2>✓ Personal Development Plan Signed Successfully!</h2>
+                    <h2>&#10003; Personal Development Plan Signed Successfully!</h2>
                     <p>Thank you for choosing your Personal Development Plan.</p>
 
                     <div class="plan-details">
@@ -418,6 +432,54 @@ $stripe_publishable_key = STRIPE_PUBLISHABLE_KEY;
     </div>
 
     <script>
+    // --- Config from PHP ---
+    const CONFIG = {
+        contractUid: '<?= addslashes($contract_uid) ?>',
+        pricingOptionId: <?= (int)$payment_option_id ?>,
+        firstName: '<?= addslashes($first_name) ?>',
+        lastName: '<?= addslashes($last_name) ?>',
+        email: '<?= addslashes($email) ?>',
+        planPrice: <?= $plan_price ?>,
+        depositAmount: <?= $deposit_amount ?>,
+        planDescription: '<?= addslashes($selected_option['description'] ?? '') ?>'
+    };
+
+    // --- Payment type state ---
+    let currentPaymentType = 'pif'; // 'pif' or 'deposit'
+    let sessionKey = null;
+    let keapContactId = null;
+    let widgetReady = false;
+    let processing = false;
+
+    function selectPaymentType(type) {
+        currentPaymentType = type;
+
+        // Update radio buttons
+        document.querySelector('#toggle-pif input').checked = (type === 'pif');
+        document.querySelector('#toggle-deposit input').checked = (type === 'deposit');
+
+        // Update toggle styling
+        document.getElementById('toggle-pif').classList.toggle('active', type === 'pif');
+        document.getElementById('toggle-deposit').classList.toggle('active', type === 'deposit');
+
+        // Update payment summary
+        updatePaymentSummary();
+    }
+
+    function getChargeAmount() {
+        return currentPaymentType === 'deposit' ? CONFIG.depositAmount : CONFIG.planPrice;
+    }
+
+    function updatePaymentSummary() {
+        const amount = getChargeAmount();
+        const isDeposit = currentPaymentType === 'deposit';
+
+        document.getElementById('summaryLabel').textContent = isDeposit ? '$100 Deposit' : 'Pay in Full';
+        document.getElementById('summaryAmount').textContent = '$' + amount.toFixed(2);
+        document.getElementById('summaryTotal').textContent = '$' + amount.toFixed(2);
+        document.getElementById('payBtnText').textContent = 'Pay $' + amount.toFixed(2) + ' & Sign Plan';
+    }
+
     // --- Terms Modal ---
     function openTermsModal() {
         document.getElementById('termsModal').classList.add('active');
@@ -437,7 +499,7 @@ $stripe_publishable_key = STRIPE_PUBLISHABLE_KEY;
         if (e.target === this) closeTermsModal();
     });
 
-    // --- Terms Checkbox → Show Payment Section ---
+    // --- Terms Checkbox -> Show Payment Section ---
     const termsCheckbox = document.getElementById('termsCheckbox');
     const paymentSection = document.getElementById('paymentSection');
 
@@ -446,128 +508,177 @@ $stripe_publishable_key = STRIPE_PUBLISHABLE_KEY;
             if (this.checked) {
                 paymentSection.style.display = 'block';
                 paymentSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Initialize Keap session on first check
+                if (!sessionKey) {
+                    initKeapSession();
+                }
             } else {
                 paymentSection.style.display = 'none';
             }
         });
     }
 
-    // --- Stripe Elements ---
+    // --- Keap Payment Integration ---
     <?php if (!$error): ?>
-    const stripe = Stripe('<?= htmlspecialchars($stripe_publishable_key) ?>');
-    const elements = stripe.elements();
-    const cardElement = elements.create('card', {
-        style: {
-            base: {
-                fontSize: '16px',
-                color: '#333',
-                '::placeholder': { color: '#aab7c4' },
-            },
-            invalid: { color: '#dc3545' },
-        }
-    });
-    cardElement.mount('#card-element');
 
-    // Enable/disable pay button based on card completeness
-    let cardComplete = false;
-    cardElement.on('change', function(event) {
-        const displayError = document.getElementById('card-errors');
-        if (event.error) {
-            displayError.textContent = event.error.message;
-        } else {
-            displayError.textContent = '';
-        }
-        cardComplete = event.complete;
-        document.getElementById('payBtn').disabled = !cardComplete;
-    });
+    async function initKeapSession() {
+        document.getElementById('widgetLoading').style.display = 'block';
+        document.getElementById('payment-errors').textContent = '';
 
-    // --- Payment Flow ---
-    let processing = false;
+        try {
+            const response = await fetch('api/keap-session.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contract_uid: CONFIG.contractUid,
+                    first_name: CONFIG.firstName,
+                    last_name: CONFIG.lastName,
+                    email: CONFIG.email
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            sessionKey = data.session_key;
+            keapContactId = data.contact_id;
+
+            // Render Keap payment widget
+            renderKeapWidget(sessionKey);
+
+        } catch (err) {
+            document.getElementById('widgetLoading').style.display = 'none';
+            document.getElementById('payment-errors').textContent = 'Failed to load payment form: ' + err.message;
+        }
+    }
+
+    function renderKeapWidget(key) {
+        const container = document.getElementById('keap-payment-container');
+        container.innerHTML = '';
+
+        const widget = document.createElement('keap-payment-method');
+        widget.setAttribute('data-key', key);
+        container.appendChild(widget);
+
+        // Listen for widget ready event
+        window.addEventListener('message', function handler(event) {
+            if (event.data && event.data.type === 'keap-payment-method-ready') {
+                widgetReady = true;
+                document.getElementById('widgetLoading').style.display = 'none';
+                document.getElementById('cardLabel').style.display = 'block';
+                container.style.display = 'block';
+                document.getElementById('payBtn').disabled = false;
+            }
+            if (event.data && event.data.type === 'keap-payment-method-error') {
+                document.getElementById('payment-errors').textContent = event.data.message || 'Payment form error';
+            }
+        });
+
+        // Fallback: show widget after a timeout even if no ready event
+        setTimeout(function() {
+            if (!widgetReady) {
+                document.getElementById('widgetLoading').style.display = 'none';
+                document.getElementById('cardLabel').style.display = 'block';
+                container.style.display = 'block';
+                document.getElementById('payBtn').disabled = false;
+                widgetReady = true;
+            }
+        }, 5000);
+    }
 
     async function handlePayment() {
-        if (processing || !cardComplete) return;
+        if (processing) return;
         processing = true;
 
         const payBtn = document.getElementById('payBtn');
         payBtn.disabled = true;
         payBtn.classList.add('processing');
-        document.getElementById('card-errors').textContent = '';
+        document.getElementById('payment-errors').textContent = '';
 
         try {
-            // Step 1: Create PaymentIntent on server
-            const createResponse = await fetch('api/create-payment-intent.php', {
+            // Get payment method from Keap widget
+            const paymentMethodId = await getKeapPaymentMethod();
+
+            if (!paymentMethodId) {
+                throw new Error('Please enter your card details');
+            }
+
+            // Send charge request to our backend
+            const chargeResponse = await fetch('api/keap-charge.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contract_uid: '<?= addslashes($contract_uid) ?>',
-                    pricing_option_id: <?= (int)$payment_option_id ?>,
-                    email: '<?= addslashes($email) ?>',
-                    first_name: '<?= addslashes($first_name) ?>',
-                    last_name: '<?= addslashes($last_name) ?>'
+                    contract_uid: CONFIG.contractUid,
+                    pricing_option_id: CONFIG.pricingOptionId,
+                    contact_id: keapContactId,
+                    payment_method_id: paymentMethodId,
+                    amount: getChargeAmount(),
+                    is_deposit: currentPaymentType === 'deposit',
+                    plan_description: CONFIG.planDescription
                 })
             });
 
-            const createData = await createResponse.json();
+            const chargeData = await chargeResponse.json();
 
-            if (createData.error) {
-                throw new Error(createData.error);
+            if (chargeData.error) {
+                throw new Error(chargeData.error);
             }
 
-            // Step 2: Confirm payment with Stripe
-            const { error, paymentIntent } = await stripe.confirmCardPayment(
-                createData.client_secret,
-                {
-                    payment_method: {
-                        card: cardElement,
-                        billing_details: {
-                            name: '<?= addslashes($first_name . ' ' . $last_name) ?>',
-                            email: '<?= addslashes($email) ?>'
-                        }
-                    }
-                }
-            );
-
-            if (error) {
-                throw new Error(error.message);
-            }
-
-            if (paymentIntent.status === 'succeeded') {
-                // Step 3: Confirm on server (record payment, create subscription, mark signed)
-                const confirmResponse = await fetch('api/confirm-payment.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contract_uid: '<?= addslashes($contract_uid) ?>',
-                        pricing_option_id: <?= (int)$payment_option_id ?>,
-                        payment_intent_id: paymentIntent.id,
-                        payment_method_id: paymentIntent.payment_method,
-                        first_name: '<?= addslashes($first_name) ?>',
-                        last_name: '<?= addslashes($last_name) ?>',
-                        email: '<?= addslashes($email) ?>'
-                    })
-                });
-
-                const confirmData = await confirmResponse.json();
-
-                if (confirmData.error) {
-                    // Payment succeeded but server confirmation failed
-                    // Still show success since money was charged
-                    console.error('Server confirmation error:', confirmData.error);
-                }
-
-                // Show success
-                document.getElementById('review-section').style.display = 'none';
-                document.getElementById('success-section').style.display = 'block';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
+            // Show success
+            document.getElementById('review-section').style.display = 'none';
+            document.getElementById('success-section').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
 
         } catch (err) {
-            document.getElementById('card-errors').textContent = err.message;
+            document.getElementById('payment-errors').textContent = err.message;
             payBtn.disabled = false;
             payBtn.classList.remove('processing');
             processing = false;
         }
     }
+
+    function getKeapPaymentMethod() {
+        return new Promise(function(resolve, reject) {
+            const widget = document.querySelector('keap-payment-method');
+            if (!widget) {
+                reject(new Error('Payment widget not loaded'));
+                return;
+            }
+
+            // Listen for the response
+            function handler(event) {
+                if (event.data && event.data.type === 'keap-payment-method-submit-result') {
+                    window.removeEventListener('message', handler);
+                    if (event.data.success && event.data.creditCardId) {
+                        resolve(event.data.creditCardId);
+                    } else if (event.data.paymentMethodId) {
+                        resolve(event.data.paymentMethodId);
+                    } else {
+                        reject(new Error(event.data.error || 'Failed to process card'));
+                    }
+                }
+            }
+            window.addEventListener('message', handler);
+
+            // Trigger submit on the widget
+            if (typeof widget.submit === 'function') {
+                widget.submit();
+            } else {
+                // Post message to widget iframe
+                widget.querySelector('iframe')?.contentWindow?.postMessage({ type: 'submit' }, '*');
+            }
+
+            // Timeout after 30 seconds
+            setTimeout(function() {
+                window.removeEventListener('message', handler);
+                reject(new Error('Payment processing timed out. Please try again.'));
+            }, 30000);
+        });
+    }
+
     <?php endif; ?>
     </script>
 </body>
