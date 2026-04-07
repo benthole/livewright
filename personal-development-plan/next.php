@@ -571,17 +571,18 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
         widget.setAttribute('data-key', key);
         container.appendChild(widget);
 
-        // Listen for widget ready event
+        // Listen for widget ready event (Keap sends { type: 'readyForStyles' })
         window.addEventListener('message', function handler(event) {
-            if (event.data && event.data.type === 'keap-payment-method-ready') {
+            if (event.data && (event.data.type === 'readyForStyles' || event.data.type === 'keap-payment-method-ready')) {
                 widgetReady = true;
                 document.getElementById('widgetLoading').style.display = 'none';
                 document.getElementById('cardLabel').style.display = 'block';
                 container.style.display = 'block';
                 document.getElementById('payBtn').disabled = false;
             }
-            if (event.data && event.data.type === 'keap-payment-method-error') {
-                document.getElementById('payment-errors').textContent = event.data.message || 'Payment form error';
+            if (event.data && event.data.error) {
+                var errMsg = (typeof event.data.error === 'object') ? event.data.error.message : event.data.error;
+                if (errMsg) document.getElementById('payment-errors').textContent = errMsg;
             }
         });
 
@@ -656,16 +657,26 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
                 return;
             }
 
+            var timeoutId;
+
             // Listen for the response
             function handler(event) {
-                if (event.data && event.data.type === 'keap-payment-method-submit-result') {
+                if (!event.data || typeof event.data !== 'object') return;
+
+                // Keap widget returns { success, paymentMethodId, creditCardId } or { error }
+                if (event.data.error) {
+                    clearTimeout(timeoutId);
                     window.removeEventListener('message', handler);
-                    if (event.data.success && event.data.creditCardId) {
-                        resolve(event.data.creditCardId);
-                    } else if (event.data.paymentMethodId) {
-                        resolve(event.data.paymentMethodId);
+                    var errMsg = (typeof event.data.error === 'object') ? event.data.error.message : event.data.error;
+                    reject(new Error(errMsg || 'Failed to process card'));
+                } else if (event.data.success) {
+                    clearTimeout(timeoutId);
+                    window.removeEventListener('message', handler);
+                    var id = event.data.creditCardId || event.data.paymentMethodId;
+                    if (id) {
+                        resolve(id);
                     } else {
-                        reject(new Error(event.data.error || 'Failed to process card'));
+                        reject(new Error('No payment method ID returned'));
                     }
                 }
             }
@@ -680,7 +691,7 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
             }
 
             // Timeout after 30 seconds
-            setTimeout(function() {
+            timeoutId = setTimeout(function() {
                 window.removeEventListener('message', handler);
                 reject(new Error('Payment processing timed out. Please try again.'));
             }, 30000);
