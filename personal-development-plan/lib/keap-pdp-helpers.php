@@ -226,7 +226,6 @@ function pdp_keap_create_order($contactId, $orderTitle, $items) {
 function pdp_keap_process_payment($orderId, $paymentMethodId, $amount, $notes = '') {
     $payload = [
         'credit_card_id' => (int)$paymentMethodId,
-        'amount' => (float)$amount,
         'notes' => $notes
     ];
 
