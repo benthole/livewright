@@ -195,6 +195,7 @@ function pdp_keap_create_order($contactId, $orderTitle, $items) {
     $payload = [
         'contact_id' => $contactId,
         'order_title' => $orderTitle,
+        'order_date' => date('c'),
         'order_items' => $orderItems
     ];
 
