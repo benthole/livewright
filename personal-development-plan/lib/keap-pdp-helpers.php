@@ -174,6 +174,51 @@ function pdp_keap_get_payment_session($contactId) {
 }
 
 /**
+ * Get or create a generic "PDP Coaching" product in Keap for order line items.
+ *
+ * @return int Product ID
+ */
+function pdp_get_or_create_keap_product() {
+    static $cachedId = null;
+    if ($cachedId !== null) return $cachedId;
+
+    // Search for existing product
+    $result = pdp_keap_request('GET', '/crm/rest/v1/products?limit=50');
+    if ($result['success'] && !empty($result['data'])) {
+        $products = $result['data'];
+        // Look for our PDP product
+        foreach ($products as $product) {
+            if (stripos($product['product_name'] ?? '', 'PDP') !== false
+                || stripos($product['product_name'] ?? '', 'Personal Development') !== false
+                || stripos($product['product_name'] ?? '', 'Coaching') !== false) {
+                $cachedId = $product['id'];
+                return $cachedId;
+            }
+        }
+        // Use first available product as fallback
+        if (!empty($products[0]['id'])) {
+            $cachedId = $products[0]['id'];
+            return $cachedId;
+        }
+    }
+
+    // Create a new product
+    $result = pdp_keap_request('POST', '/crm/rest/v1/products', [
+        'product_name' => 'PDP Coaching',
+        'product_price' => 0,
+        'product_desc' => 'Personal Development Plan coaching services',
+    ]);
+
+    if ($result['success'] && isset($result['data']['id'])) {
+        $cachedId = $result['data']['id'];
+        return $cachedId;
+    }
+
+    // Last resort - return 1 and let the API error with a better message
+    return 1;
+}
+
+/**
  * Create an order in Keap.
  *
  * @param int $contactId Keap contact ID
@@ -189,6 +234,7 @@ function pdp_keap_create_order($contactId, $orderTitle, $items) {
             'description' => $item['description'],
             'price' => (float)$item['price'],
             'quantity' => (int)($item['quantity'] ?? 1),
+            'product_id' => $item['product_id'] ?? pdp_get_or_create_keap_product(),
         ];
     }
 
