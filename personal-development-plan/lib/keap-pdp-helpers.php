@@ -227,7 +227,6 @@ function pdp_keap_process_payment($orderId, $paymentMethodId, $amount, $notes = 
     $payload = [
         'charge_now' => true,
         'credit_card_id' => (int)$paymentMethodId,
-        'date' => date('c'),
         'notes' => $notes,
         'payment_amount' => (float)$amount,
         'payment_gateway_id' => 2,
