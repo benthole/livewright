@@ -189,7 +189,6 @@ function pdp_keap_create_order($contactId, $orderTitle, $items) {
             'description' => $item['description'],
             'price' => (float)$item['price'],
             'quantity' => (int)($item['quantity'] ?? 1),
-            'type' => 'Product'
         ];
     }
 
