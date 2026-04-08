@@ -225,9 +225,12 @@ function pdp_keap_create_order($contactId, $orderTitle, $items) {
  */
 function pdp_keap_process_payment($orderId, $paymentMethodId, $amount, $notes = '') {
     $payload = [
+        'charge_now' => true,
         'credit_card_id' => (int)$paymentMethodId,
+        'date' => date('c'),
+        'notes' => $notes,
         'payment_amount' => (float)$amount,
-        'notes' => $notes
+        'payment_method_type' => 'CREDIT_CARD',
     ];
 
     $result = pdp_keap_request('POST', "/crm/rest/v1/orders/$orderId/payments", $payload);
