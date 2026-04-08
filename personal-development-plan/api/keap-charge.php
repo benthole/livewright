@@ -119,6 +119,7 @@ try {
                 : "{$option['description']} ({$option['sub_option_name']} - {$option['type']})",
             'price' => $amount,
             'quantity' => 1,
+            'is_deposit' => $is_deposit,
         ]
     ];
 
