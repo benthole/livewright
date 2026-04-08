@@ -230,6 +230,7 @@ function pdp_keap_process_payment($orderId, $paymentMethodId, $amount, $notes = 
         'date' => date('c'),
         'notes' => $notes,
         'payment_amount' => (float)$amount,
+        'payment_gateway_id' => 2,
         'payment_method_type' => 'CREDIT_CARD',
     ];
 
