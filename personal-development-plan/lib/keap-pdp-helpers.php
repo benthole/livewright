@@ -102,7 +102,15 @@ function pdp_keap_request($method, $endpoint, $data = null) {
     }
 
     error_log("PDP Keap API error ($httpCode): $response");
-    return ['success' => false, 'data' => $decoded, 'http_code' => $httpCode, 'error' => "HTTP $httpCode"];
+    $errorMsg = "HTTP $httpCode";
+    if ($decoded) {
+        if (!empty($decoded['message'])) {
+            $errorMsg = $decoded['message'];
+        } elseif (!empty($decoded['error'])) {
+            $errorMsg = $decoded['error'];
+        }
+    }
+    return ['success' => false, 'data' => $decoded, 'http_code' => $httpCode, 'error' => $errorMsg];
 }
 
 /**
@@ -177,10 +185,11 @@ function pdp_keap_create_order($contactId, $orderTitle, $items) {
     $orderItems = [];
     foreach ($items as $item) {
         $orderItems[] = [
+            'name' => $item['description'],
             'description' => $item['description'],
             'price' => (float)$item['price'],
             'quantity' => (int)($item['quantity'] ?? 1),
-            'type' => 'UNKNOWN'
+            'type' => 'Product'
         ];
     }
 
