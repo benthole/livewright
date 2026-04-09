@@ -77,40 +77,60 @@ function keap_get_contacts_by_tag($tagId, $limit = 100, $offset = 0) {
         return ['contacts' => [], 'count' => 0];
     }
 
-    // Fetch full contact details for each contact individually
-    // This ensures we only get the contacts we want with all their custom fields
-    $fullContacts = [];
-
+    // Fetch full contact details in parallel batches using curl_multi
+    // The tag endpoint only returns basic fields; we need custom_fields
+    $contactIds = [];
     foreach ($taggedContacts as $item) {
-        if (!isset($item['contact']['id'])) {
-            continue;
+        if (isset($item['contact']['id'])) {
+            $contactIds[] = (int)$item['contact']['id'];
+        }
+    }
+
+    $fullContacts = [];
+    $batchSize = 10;
+    $batches = array_chunk($contactIds, $batchSize);
+
+    foreach ($batches as $batch) {
+        $mh = curl_multi_init();
+        $handles = [];
+
+        foreach ($batch as $contactId) {
+            $contactUrl = "https://api.infusionsoft.com/crm/rest/v1/contacts/{$contactId}?optional_properties=custom_fields";
+            $ch = curl_init($contactUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    "Authorization: Bearer $token",
+                    "Content-Type: application/json"
+                ],
+                CURLOPT_TIMEOUT => 15,
+            ]);
+            curl_multi_add_handle($mh, $ch);
+            $handles[] = $ch;
         }
 
-        $contactId = (int)$item['contact']['id'];
-
-        // Fetch full contact details including custom fields
-        // Request custom_fields as an optional property to get all custom fields
-        $contactUrl = "https://api.infusionsoft.com/crm/rest/v1/contacts/{$contactId}?optional_properties=custom_fields";
-
-        $ch = curl_init($contactUrl);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                "Authorization: Bearer $token",
-                "Content-Type: application/json"
-            ]
-        ]);
-
-        $contactResp = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode === 200) {
-            $contactData = json_decode($contactResp, true);
-            if ($contactData) {
-                $fullContacts[] = $contactData;
+        // Execute all requests in parallel
+        do {
+            $status = curl_multi_exec($mh, $active);
+            if ($active) {
+                curl_multi_select($mh);
             }
+        } while ($active && $status === CURLM_OK);
+
+        // Collect results
+        foreach ($handles as $ch) {
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            if ($httpCode === 200) {
+                $contactData = json_decode(curl_multi_getcontent($ch), true);
+                if ($contactData) {
+                    $fullContacts[] = $contactData;
+                }
+            }
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
         }
+
+        curl_multi_close($mh);
     }
 
     return ['contacts' => $fullContacts, 'count' => count($fullContacts)];

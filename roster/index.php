@@ -1318,24 +1318,28 @@ function getCustomFieldById($customFields, $fieldId) {
                 <p style="margin-bottom: 15px; color: #7f8c8d;">Select a new team for the <strong id="cohortChangeCount">0</strong> selected contact(s):</p>
                 <div class="form-group">
                     <label for="cohortSelect">Team</label>
-                    <select id="cohortSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                        <option value="">-- Select Team --</option>
-                        <optgroup label="Active">
-                            <?php foreach ($cohorts['active'] as $cohort): ?>
-                            <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
-                            <?php endforeach; ?>
-                        </optgroup>
-                        <optgroup label="Functional">
-                            <?php foreach ($cohorts['functional'] as $cohort): ?>
-                            <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
-                            <?php endforeach; ?>
-                        </optgroup>
-                        <optgroup label="Inactive">
-                            <?php foreach ($cohorts['inactive'] as $cohort): ?>
-                            <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
-                            <?php endforeach; ?>
-                        </optgroup>
-                    </select>
+                    <div style="display: flex; gap: 8px; align-items: flex-start;">
+                        <select id="cohortSelect" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                            <option value="">-- Select Team --</option>
+                            <optgroup label="Active">
+                                <?php foreach ($cohorts['active'] as $cohort): ?>
+                                <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <optgroup label="Functional">
+                                <?php foreach ($cohorts['functional'] as $cohort): ?>
+                                <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <optgroup label="Inactive">
+                                <?php foreach ($cohorts['inactive'] as $cohort): ?>
+                                <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                        </select>
+                        <button type="button" id="syncTeamsBtn" title="Sync team values from Keap" style="padding: 10px 14px; border: 1px solid #17a2b8; background: white; color: #17a2b8; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;" onmouseover="this.style.background='#17a2b8';this.style.color='white'" onmouseout="this.style.background='white';this.style.color='#17a2b8'">🔄 Sync</button>
+                    </div>
+                    <div id="syncTeamsResult" style="margin-top: 8px; font-size: 13px; display: none;"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -2213,6 +2217,66 @@ function getCustomFieldById($customFields, $fieldId) {
         changeCohortModal.addEventListener('click', function(e) {
             if (e.target === changeCohortModal) {
                 changeCohortModal.classList.remove('show');
+            }
+        });
+
+        // Sync Teams from Keap
+        document.getElementById('syncTeamsBtn').addEventListener('click', async function() {
+            const btn = this;
+            const resultDiv = document.getElementById('syncTeamsResult');
+            btn.disabled = true;
+            btn.textContent = '⏳ Syncing...';
+            resultDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('sync_teams.php');
+                const data = await response.json();
+
+                if (!data.success) {
+                    resultDiv.innerHTML = '<span style="color:#dc3545;">Error: ' + (data.error || 'Unknown error') + '</span>';
+                    resultDiv.style.display = 'block';
+                    return;
+                }
+
+                // Add any new teams from Keap to the dropdown
+                const select = document.getElementById('cohortSelect');
+                const existingValues = new Set();
+                select.querySelectorAll('option').forEach(opt => existingValues.add(opt.value));
+
+                let added = 0;
+                if (data.new_teams.length > 0) {
+                    // Find or create "From Keap" optgroup
+                    let keapGroup = select.querySelector('optgroup[label="From Keap"]');
+                    if (!keapGroup) {
+                        keapGroup = document.createElement('optgroup');
+                        keapGroup.label = 'From Keap';
+                        select.appendChild(keapGroup);
+                    }
+
+                    data.new_teams.forEach(team => {
+                        if (!existingValues.has(team)) {
+                            const opt = document.createElement('option');
+                            opt.value = team;
+                            opt.textContent = team;
+                            keapGroup.appendChild(opt);
+                            added++;
+                        }
+                    });
+                }
+
+                if (added > 0) {
+                    resultDiv.innerHTML = '<span style="color:#28a745;">Added ' + added + ' new team(s): ' + data.new_teams.join(', ') + '</span>';
+                } else {
+                    resultDiv.innerHTML = '<span style="color:#666;">All teams already in sync (' + data.keap_teams.length + ' found in Keap)</span>';
+                }
+                resultDiv.style.display = 'block';
+
+            } catch (error) {
+                resultDiv.innerHTML = '<span style="color:#dc3545;">Failed to sync teams</span>';
+                resultDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Sync';
             }
         });
 

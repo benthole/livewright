@@ -37,11 +37,32 @@ if ($newCohort === '') {
     exit;
 }
 
-// Validate cohort is in our allowed list
+// Validate cohort is in our allowed list or exists in Keap roster data
 $allCohorts = array_merge($cohorts['active'], $cohorts['functional'], $cohorts['inactive']);
 if (!in_array($newCohort, $allCohorts)) {
-    echo json_encode(['success' => false, 'error' => 'Invalid cohort value']);
-    exit;
+    // Check if it's a valid team from Keap (synced but not yet in config)
+    try {
+        $checkConn = new PDO("mysql:host=$db_host_lw;dbname=$db_name_lw;charset=utf8mb4", $db_user_lw, $db_pass_lw);
+        $checkStmt = $checkConn->query("SELECT data FROM roster");
+        $keapTeams = [];
+        while ($row = $checkStmt->fetch(PDO::FETCH_ASSOC)) {
+            $data = json_decode($row['data'], true);
+            if (!empty($data['custom_fields'])) {
+                foreach ($data['custom_fields'] as $field) {
+                    if ($field['id'] == $cohort_field_id && !empty($field['content'])) {
+                        $keapTeams[$field['content']] = true;
+                    }
+                }
+            }
+        }
+        if (!isset($keapTeams[$newCohort])) {
+            echo json_encode(['success' => false, 'error' => 'Invalid cohort value']);
+            exit;
+        }
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'error' => 'Invalid cohort value']);
+        exit;
+    }
 }
 
 // Get Keap token
