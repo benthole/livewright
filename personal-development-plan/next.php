@@ -61,12 +61,15 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
         .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .header { background: #007cba; color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; }
+        .header { background: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; border-bottom: 3px solid #2BB5B0; }
+        .header img.logo { width: 200px; height: auto; margin-bottom: 15px; }
+        .header h1 { color: #005FA3; margin: 0 0 5px 0; }
+        .header p { color: #555; }
         .content { padding: 30px; }
         .error { background: #f8d7da; color: #721c24; padding: 20px; border-radius: 4px; margin: 20px; text-align: center; }
         .success { background: #d4edda; color: #155724; padding: 20px; border-radius: 4px; margin: 20px; text-align: center; }
         .plan-details { background: #f8f9fa; padding: 20px; border-radius: 4px; margin-bottom: 30px; }
-        .plan-details h3 { margin-top: 0; color: #007cba; }
+        .plan-details h3 { margin-top: 0; color: #005FA3; }
         .price-highlight { font-size: 1.5em; font-weight: bold; color: #28a745; margin: 10px 0; }
         .client-info { background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 4px; margin-bottom: 20px; }
         .back-btn { background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 4px; text-decoration: none; display: inline-block; margin-right: 10px; }
@@ -79,7 +82,7 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
         .payment-toggle { background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; }
         .payment-toggle h3 { margin-top: 0; color: #333; margin-bottom: 15px; }
         .toggle-option { display: flex; align-items: flex-start; gap: 12px; padding: 15px; border: 2px solid #ddd; border-radius: 6px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
-        .toggle-option:hover { border-color: #007cba; background: #f0f8ff; }
+        .toggle-option:hover { border-color: #005FA3; background: #f0f8ff; }
         .toggle-option.active { border-color: #28a745; background: #f0fff4; }
         .toggle-option input[type="radio"] { margin-top: 3px; width: 18px; height: 18px; cursor: pointer; }
         .toggle-option .option-details { flex: 1; }
@@ -91,37 +94,37 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         .modal-overlay.active { display: flex; justify-content: center; align-items: flex-start; }
         .modal-content { background: white; border-radius: 8px; max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; margin: 20px auto; }
-        .modal-header { background: #007cba; color: white; padding: 20px 30px; border-radius: 8px 8px 0 0; position: sticky; top: 0; z-index: 1; }
+        .modal-header { background: #005FA3; color: white; padding: 20px 30px; border-radius: 8px 8px 0 0; position: sticky; top: 0; z-index: 1; }
         .modal-header h2 { margin: 0; }
         .modal-close { position: absolute; right: 15px; top: 15px; background: none; border: none; color: white; font-size: 28px; cursor: pointer; line-height: 1; }
         .modal-close:hover { opacity: 0.8; }
         .modal-body { padding: 30px; font-size: 14px; line-height: 1.6; }
-        .modal-body h3 { color: #007cba; margin-top: 30px; border-bottom: 2px solid #007cba; padding-bottom: 10px; }
+        .modal-body h3 { color: #005FA3; margin-top: 30px; border-bottom: 2px solid #005FA3; padding-bottom: 10px; }
         .modal-body h3:first-child { margin-top: 0; }
         .modal-body h4 { color: #333; margin-top: 20px; }
         .modal-body ul { margin: 10px 0; padding-left: 25px; }
         .modal-body li { margin-bottom: 8px; }
         .modal-body p { margin: 10px 0; }
         .modal-footer { padding: 20px 30px; border-top: 1px solid #ddd; text-align: center; position: sticky; bottom: 0; background: white; }
-        .modal-footer button { background: #007cba; color: white; padding: 12px 30px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        .modal-footer button { background: #005FA3; color: white; padding: 12px 30px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
         .modal-footer button:hover { background: #006399; }
 
         /* Terms checkbox */
         .terms-agreement { background: #f8f9fa; padding: 15px 20px; border-radius: 4px; margin: 20px 0; border: 1px solid #ddd; }
         .terms-agreement label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
         .terms-agreement input[type="checkbox"] { margin-top: 3px; width: 18px; height: 18px; }
-        .terms-link { color: #007cba; text-decoration: underline; cursor: pointer; }
+        .terms-link { color: #005FA3; text-decoration: underline; cursor: pointer; }
         .terms-link:hover { color: #005a8c; }
 
         /* Payment Section */
-        .payment-section { background: #f0f7ff; border: 2px solid #007cba; border-radius: 8px; padding: 25px; margin: 20px 0; }
-        .payment-section h3 { margin-top: 0; color: #007cba; }
+        .payment-section { background: #f0f7ff; border: 2px solid #005FA3; border-radius: 8px; padding: 25px; margin: 20px 0; }
+        .payment-section h3 { margin-top: 0; color: #005FA3; }
         .payment-summary { background: white; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
         .payment-summary .line-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
         .payment-summary .line-item:last-child { border-bottom: none; }
         .payment-summary .line-item .label { color: #666; }
         .payment-summary .line-item .amount { font-weight: bold; }
-        .payment-summary .line-item.total { border-top: 2px solid #007cba; padding-top: 12px; margin-top: 5px; }
+        .payment-summary .line-item.total { border-top: 2px solid #005FA3; padding-top: 12px; margin-top: 5px; }
         .payment-summary .line-item.total .amount { color: #28a745; font-size: 1.2em; }
         .payment-summary .line-item.recurring { color: #666; font-size: 0.9em; }
 
@@ -140,12 +143,13 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
         .secure-badge svg { vertical-align: middle; margin-right: 5px; }
 
         .loading-indicator { text-align: center; padding: 20px; color: #666; }
-        .loading-indicator .spinner { border: 3px solid #ddd; border-top: 3px solid #007cba; }
+        .loading-indicator .spinner { border: 3px solid #ddd; border-top: 3px solid #005FA3; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
+            <img src="https://cdn.shortpixel.ai/spai/q_lossy+ret_img+to_webp/livewright.com/wp-content/uploads/2023/12/LiveWright-logo%E2%80%934C-padded.png" alt="LiveWright" class="logo">
             <h1>Confirm Your Selection</h1>
             <?php if ($contract): ?>
                 <p>Personal Development Plan</p>

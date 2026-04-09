@@ -62,7 +62,10 @@ if (empty($uid)) {
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
         .container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .header { background: #007cba; color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; }
+        .header { background: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; border-bottom: 3px solid #2BB5B0; }
+        .header img.logo { width: 200px; height: auto; margin-bottom: 15px; }
+        .header h1 { color: #005FA3; margin: 0 0 5px 0; }
+        .header p { color: #555; }
         .content { padding: 30px; }
         .error { background: #f8d7da; color: #721c24; padding: 20px; border-radius: 4px; margin: 20px; text-align: center; }
         .contract-info { margin-bottom: 30px; }
@@ -76,10 +79,10 @@ if (empty($uid)) {
         .sub-options-container { margin-top: 20px; }
         .pricing-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .pricing-column { }
-        .pricing-column h4 { text-align: center; color: #007cba; margin: 0 0 15px 0; padding: 10px; background: #f0f8ff; border-radius: 4px; }
+        .pricing-column h4 { text-align: center; color: #005FA3; margin: 0 0 15px 0; padding: 10px; background: #f0f8ff; border-radius: 4px; }
         
         .pricing-tier { border: 1px solid #ddd; border-radius: 4px; padding: 15px; text-align: center; background: white; cursor: pointer; transition: all 0.3s ease; margin-bottom: 10px; }
-        .pricing-tier:hover { border-color: #007cba; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .pricing-tier:hover { border-color: #005FA3; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .pricing-tier.selected { border-color: #28a745; background: #f0fff4; border-width: 2px; }
         .pricing-tier .sub-option-label { font-weight: bold; color: #333; margin-bottom: 8px; font-size: 0.95em; }
         .pricing-tier.recommended { border-color: #333; background: white; border-width: 2px; }
@@ -121,8 +124,8 @@ if (empty($uid)) {
         .savings-badge { background: #28a745; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.75em; margin-left: 5px; }
         .footer { text-align: center; padding: 20px; color: #666; font-size: 0.9em; }
         .signed-badge { background: #28a745; color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.9em; margin-left: 10px; }
-        .pathways-section { background: #f8f9fa; padding: 25px; border-radius: 4px; margin-bottom: 30px; border-left: 4px solid #007cba; }
-        .pathways-section h2 { color: #007cba; margin-top: 0; margin-bottom: 20px; }
+        .pathways-section { background: #f8f9fa; padding: 25px; border-radius: 4px; margin-bottom: 30px; border-left: 4px solid #005FA3; }
+        .pathways-section h2 { color: #005FA3; margin-top: 0; margin-bottom: 20px; }
         .pathways-section p { margin-bottom: 20px; line-height: 1.6; }
         .pathway-item { margin-bottom: 25px; }
         .pathway-item h3 { color: #333; margin-bottom: 10px; }
@@ -130,7 +133,7 @@ if (empty($uid)) {
         .pathway-item li { margin-bottom: 8px; line-height: 1.5; }
         .sub-list { margin-top: 8px; margin-left: 20px; }
         .sub-list li { margin-bottom: 5px; font-size: 0.95em; }
-        .selection-form { background: #f8f9fa; padding: 30px; margin-top: 30px; border-radius: 4px; border-top: 3px solid #007cba; }
+        .selection-form { background: #f8f9fa; padding: 30px; margin-top: 30px; border-radius: 4px; border-top: 3px solid #005FA3; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
@@ -195,7 +198,7 @@ if (empty($uid)) {
         }
         .cart-panel.open { display: block; }
         .cart-panel-header {
-            background: #007cba;
+            background: #005FA3;
             color: white;
             padding: 15px 20px;
             border-radius: 12px 12px 0 0;
@@ -229,7 +232,7 @@ if (empty($uid)) {
         .cart-item-remove:hover { text-decoration: underline; }
         .cart-total-row {
             padding: 15px 0;
-            border-top: 2px solid #007cba;
+            border-top: 2px solid #005FA3;
             margin-top: 10px;
             font-weight: bold;
             display: flex;
@@ -257,7 +260,7 @@ if (empty($uid)) {
             border-width: 1px;
         }
         .pricing-tier.recommended.user-selected-elsewhere:hover {
-            border-color: #007cba;
+            border-color: #005FA3;
         }
         /* Selected recommended card gets the green treatment */
         .pricing-tier.recommended.selected {
@@ -270,6 +273,7 @@ if (empty($uid)) {
 <body>
     <div class="container">
         <div class="header">
+            <img src="https://cdn.shortpixel.ai/spai/q_lossy+ret_img+to_webp/livewright.com/wp-content/uploads/2023/12/LiveWright-logo%E2%80%934C-padded.png" alt="LiveWright" class="logo">
             <h1>Personal Development Plan</h1>
             <?php if ($contract): ?>
                 <p>For <?= htmlspecialchars($contract['first_name'] . ' ' . $contract['last_name']) ?>
@@ -409,7 +413,7 @@ if (empty($uid)) {
                                                             $pmode = $monthly_tier['payment_mode'] ?? 'recurring_immediate';
                                                             if ($deposit > 0 && $pmode !== 'recurring_immediate'):
                                                             ?>
-                                                                <div class="price-details" style="color: #007cba; margin-top: 5px;">Deposit: $<?= number_format($deposit, 2) ?> due at sign-up</div>
+                                                                <div class="price-details" style="color: #005FA3; margin-top: 5px;">Deposit: $<?= number_format($deposit, 2) ?> due at sign-up</div>
                                                             <?php endif; ?>
                                                         </div>
                                                     <?php endif; ?>
@@ -483,7 +487,7 @@ if (empty($uid)) {
                                                     $m_pmode = $monthly_tier['payment_mode'] ?? 'recurring_immediate';
                                                     if ($m_deposit > 0 && $m_pmode !== 'recurring_immediate'):
                                                     ?>
-                                                        <div class="price-details" style="color: #007cba; margin-top: 5px;">Deposit: $<?= number_format($m_deposit, 2) ?> due at sign-up</div>
+                                                        <div class="price-details" style="color: #005FA3; margin-top: 5px;">Deposit: $<?= number_format($m_deposit, 2) ?> due at sign-up</div>
                                                     <?php endif; ?>
                                                 </div>
                                             </div>
