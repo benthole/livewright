@@ -1122,6 +1122,11 @@ function getCustomFieldById($customFields, $fieldId) {
                             <span class="sort-indicator"></span>
                             <div class="filter-dropdown" id="cohortFilter"></div>
                         </th>
+                        <th class="sortable filterable" data-column="eteam">
+                            E Team
+                            <span class="sort-indicator"></span>
+                            <div class="filter-dropdown" id="eteamFilter"></div>
+                        </th>
                         <th>CARE Profile</th>
                         <th class="filterable" data-column="coaches">
                             Coach(es)
@@ -1181,6 +1186,10 @@ function getCustomFieldById($customFields, $fieldId) {
 
                         // Get coaching files link (custom field ID 135)
                         $coachingFilesLink = getCustomFieldById($customFields, 135);
+
+                        // Get E Team role (custom field ID 73)
+                        $eteamRole = getCustomFieldById($customFields, $eteam_role_field_id);
+                        $isEteam = !empty($eteamRole) && $eteamRole !== '---';
                     ?>
                     <?php
                         $isDropped = ($cohort === '-dropped');
@@ -1201,7 +1210,8 @@ function getCustomFieldById($customFields, $fieldId) {
                         data-payment-option="<?php echo htmlspecialchars($paymentOption); ?>"
                         data-payment-frequency="<?php echo htmlspecialchars($paymentFrequency); ?>"
                         data-coaching-files="<?php echo htmlspecialchars($coachingFilesLink); ?>"
-                        data-search-text="<?php echo htmlspecialchars(strtolower($firstName . ' ' . $lastName . ' ' . $email . ' ' . $phone . ' ' . $cohort . ' ' . $careLabel . ' ' . $coachIndividualRaw . ' ' . $coachGroup)); ?>">
+                        data-eteam="<?php echo $isEteam ? htmlspecialchars($eteamRole) : ''; ?>"
+                        data-search-text="<?php echo htmlspecialchars(strtolower($firstName . ' ' . $lastName . ' ' . $email . ' ' . $phone . ' ' . $cohort . ' ' . $careLabel . ' ' . $coachIndividualRaw . ' ' . $coachGroup . ($isEteam ? ' ' . $eteamRole . ' e team' : ''))); ?>">
                         <?php if ($user_can_edit): ?>
                         <td class="checkbox-cell">
                             <input type="checkbox" class="row-checkbox" value="<?php echo htmlspecialchars($data['id'] ?? ''); ?>">
@@ -1236,6 +1246,11 @@ function getCustomFieldById($customFields, $fieldId) {
                             <?php endif; ?>
                         </td>
                         <td><?php echo htmlspecialchars($cohort); ?></td>
+                        <td>
+                            <?php if ($isEteam): ?>
+                                <span style="background:#7c3aed;color:white;padding:2px 8px;border-radius:10px;font-size:0.8em;font-weight:600;"><?php echo htmlspecialchars($eteamRole); ?></span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <?php if ($careLabel): ?>
                                 <div class="care-label"><?php echo htmlspecialchars($careLabel); ?></div>
@@ -1748,6 +1763,98 @@ function getCustomFieldById($customFields, $fieldId) {
 
         // Initialize cohort filter
         buildCohortFilter();
+
+        // E Team filter functionality
+        const eteamHeader = document.querySelector('th.filterable[data-column="eteam"]');
+        const eteamFilterDropdown = document.getElementById('eteamFilter');
+        let selectedEteam = new Set();
+
+        function buildEteamFilter() {
+            const roles = new Set();
+            let hasNonEteam = false;
+            tableRows.forEach(row => {
+                const role = row.getAttribute('data-eteam');
+                if (role) {
+                    roles.add(role);
+                } else {
+                    hasNonEteam = true;
+                }
+            });
+
+            eteamFilterDropdown.innerHTML = '';
+
+            const actions = document.createElement('div');
+            actions.className = 'filter-actions';
+            actions.innerHTML = '<a id="eteamUncheckAll">Uncheck all</a>';
+            eteamFilterDropdown.appendChild(actions);
+
+            actions.querySelector('#eteamUncheckAll').addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                eteamFilterDropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+                selectedEteam.clear();
+                applyEteamFilter();
+            });
+
+            // Add "(Not on E Team)" option
+            if (hasNonEteam) {
+                const option = document.createElement('div');
+                option.className = 'filter-option';
+                option.innerHTML = '<input type="checkbox" id="eteam-none" value="" checked><label for="eteam-none" style="color:#999;">(Not on E Team)</label>';
+                option.querySelector('input').addEventListener('change', function() {
+                    if (this.checked) { selectedEteam.add(''); } else { selectedEteam.delete(''); }
+                    applyEteamFilter();
+                });
+                eteamFilterDropdown.appendChild(option);
+                selectedEteam.add('');
+            }
+
+            Array.from(roles).sort().forEach(role => {
+                const option = document.createElement('div');
+                option.className = 'filter-option';
+                option.innerHTML = `<input type="checkbox" id="eteam-${role}" value="${role}" checked><label for="eteam-${role}">${role}</label>`;
+                option.querySelector('input').addEventListener('change', function() {
+                    if (this.checked) { selectedEteam.add(role); } else { selectedEteam.delete(role); }
+                    applyEteamFilter();
+                });
+                eteamFilterDropdown.appendChild(option);
+                selectedEteam.add(role);
+            });
+        }
+
+        function applyEteamFilter() {
+            tableRows.forEach(row => {
+                const role = row.getAttribute('data-eteam') || '';
+                if (selectedEteam.size === 0 || selectedEteam.has(role)) {
+                    if (row.style.display === 'none' && !selectedCohorts.has(row.getAttribute('data-cohort'))) return;
+                    // Don't override other filters hiding this row
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        if (eteamHeader) {
+            eteamHeader.addEventListener('click', function(e) {
+                e.stopPropagation();
+                eteamFilterDropdown.classList.toggle('show');
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (eteamHeader && !eteamHeader.contains(e.target)) {
+                if (selectedEteam.size === 0) {
+                    eteamFilterDropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                        cb.checked = true;
+                        selectedEteam.add(cb.value);
+                    });
+                    applyEteamFilter();
+                }
+                eteamFilterDropdown.classList.remove('show');
+            }
+        });
+
+        buildEteamFilter();
 
         // Coaches filter functionality
         const coachesHeader = document.querySelector('th.filterable[data-column="coaches"]');
