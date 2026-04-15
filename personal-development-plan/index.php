@@ -68,6 +68,8 @@ if (empty($uid)) {
         .header p { color: #555; }
         .content { padding: 30px; }
         .error { background: #f8d7da; color: #721c24; padding: 20px; border-radius: 4px; margin: 20px; text-align: center; }
+        .greeting { margin-bottom: 30px; padding: 20px 25px; background: #f8f9fa; border-left: 4px solid #005FA3; border-radius: 4px; line-height: 1.6; }
+        .greeting p:last-child { margin-bottom: 0; }
         .contract-info { margin-bottom: 30px; }
         .contract-info h2 { color: #333; margin-bottom: 10px; }
         .contract-description { background: #f8f9fa; padding: 20px; border-radius: 4px; margin-bottom: 30px; }
@@ -291,6 +293,10 @@ if (empty($uid)) {
             </div>
         <?php else: ?>
             <div class="content">
+                <?php if (!empty($contract['greeting'])): ?>
+                    <div class="greeting"><?= $contract['greeting'] ?></div>
+                <?php endif; ?>
+
                 <div class="contract-info">
                     <h2>Contract Details</h2>
                     <p><strong>Client:</strong> <?= htmlspecialchars($contract['first_name'] . ' ' . $contract['last_name']) ?></p>

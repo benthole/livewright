@@ -22,6 +22,7 @@ $success = '';
 
 if ($_POST) {
     $name = trim($_POST['name'] ?? '');
+    $greeting = trim($_POST['greeting'] ?? '');
     $contract_description = trim($_POST['contract_description'] ?? '');
     $pdp_from = trim($_POST['pdp_from'] ?? '');
     $pdp_toward = trim($_POST['pdp_toward'] ?? '');
@@ -64,15 +65,15 @@ if ($_POST) {
             if ($preset_id) {
                 // Update preset
                 $stmt = $pdo->prepare("
-                    UPDATE pdp_presets SET 
-                    name = ?, contract_description = ?, pdp_from = ?, pdp_toward = ?,
+                    UPDATE pdp_presets SET
+                    name = ?, greeting = ?, contract_description = ?, pdp_from = ?, pdp_toward = ?,
                     option_1_desc = ?, option_1_price_monthly = ?, option_1_price_quarterly = ?, option_1_price_yearly = ?, option_1_sub_options = ?,
                     option_2_desc = ?, option_2_price_monthly = ?, option_2_price_quarterly = ?, option_2_price_yearly = ?, option_2_sub_options = ?,
                     option_3_desc = ?, option_3_price_monthly = ?, option_3_price_quarterly = ?, option_3_price_yearly = ?, option_3_sub_options = ?
                     WHERE id = ?
                 ");
                 $stmt->execute([
-                    $name, $contract_description, $pdp_from, $pdp_toward,
+                    $name, $greeting, $contract_description, $pdp_from, $pdp_toward,
                     $_POST['option_1_desc'] ?? '', $_POST['option_1_price_monthly'] ?? null, $_POST['option_1_price_quarterly'] ?? null, $_POST['option_1_price_yearly'] ?? null, $sub_options_data[1],
                     $_POST['option_2_desc'] ?? '', $_POST['option_2_price_monthly'] ?? null, $_POST['option_2_price_quarterly'] ?? null, $_POST['option_2_price_yearly'] ?? null, $sub_options_data[2],
                     $_POST['option_3_desc'] ?? '', $_POST['option_3_price_monthly'] ?? null, $_POST['option_3_price_quarterly'] ?? null, $_POST['option_3_price_yearly'] ?? null, $sub_options_data[3],
@@ -81,15 +82,15 @@ if ($_POST) {
             } else {
                 // Insert new preset
                 $stmt = $pdo->prepare("
-                    INSERT INTO pdp_presets 
-                    (name, contract_description, pdp_from, pdp_toward, 
+                    INSERT INTO pdp_presets
+                    (name, greeting, contract_description, pdp_from, pdp_toward,
                      option_1_desc, option_1_price_monthly, option_1_price_quarterly, option_1_price_yearly, option_1_sub_options,
                      option_2_desc, option_2_price_monthly, option_2_price_quarterly, option_2_price_yearly, option_2_sub_options,
                      option_3_desc, option_3_price_monthly, option_3_price_quarterly, option_3_price_yearly, option_3_sub_options)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([
-                    $name, $contract_description, $pdp_from, $pdp_toward,
+                    $name, $greeting, $contract_description, $pdp_from, $pdp_toward,
                     $_POST['option_1_desc'] ?? '', $_POST['option_1_price_monthly'] ?? null, $_POST['option_1_price_quarterly'] ?? null, $_POST['option_1_price_yearly'] ?? null, $sub_options_data[1],
                     $_POST['option_2_desc'] ?? '', $_POST['option_2_price_monthly'] ?? null, $_POST['option_2_price_quarterly'] ?? null, $_POST['option_2_price_yearly'] ?? null, $sub_options_data[2],
                     $_POST['option_3_desc'] ?? '', $_POST['option_3_price_monthly'] ?? null, $_POST['option_3_price_quarterly'] ?? null, $_POST['option_3_price_yearly'] ?? null, $sub_options_data[3]
@@ -108,6 +109,7 @@ if ($_POST) {
 // Prepare form data
 $form_data = [
     'name' => $_POST['name'] ?? ($preset['name'] ?? ''),
+    'greeting' => $_POST['greeting'] ?? ($preset['greeting'] ?? ''),
     'contract_description' => $_POST['contract_description'] ?? ($preset['contract_description'] ?? ''),
     'pdp_from' => $_POST['pdp_from'] ?? ($preset['pdp_from'] ?? ''),
     'pdp_toward' => $_POST['pdp_toward'] ?? ($preset['pdp_toward'] ?? '')
@@ -176,7 +178,14 @@ require_once 'includes/header.php';
             <label>Preset Name:</label>
             <input type="text" name="name" value="<?= htmlspecialchars($form_data['name']) ?>" required>
         </div>
-        
+
+        <div class="description-group">
+            <label>Greeting:</label>
+            <div id="greeting_editor" class="quill-editor"></div>
+            <textarea name="greeting" class="hidden"><?= htmlspecialchars($form_data['greeting']) ?></textarea>
+            <small style="color: #666; font-style: italic;">Shown at the top of the client's PDP page (editable per-PDP)</small>
+        </div>
+
         <div class="description-group">
             <label>FROM – Present State Challenges and Opportunities:</label>
             <div id="pdp_from_editor" class="quill-editor"></div>
@@ -278,6 +287,12 @@ require_once 'includes/header.php';
         ['clean']
     ];
     
+    const greetingEditor = new Quill('#greeting_editor', {
+        theme: 'snow',
+        placeholder: 'Welcome message shown at the top of the PDP...',
+        modules: { toolbar: toolbarOptions }
+    });
+
     const contractEditor = new Quill('#contract_editor', {
         theme: 'snow',
         placeholder: 'Describe what is included with all options...',
@@ -306,6 +321,11 @@ require_once 'includes/header.php';
     }
     
     // Set initial content
+    const greetingTextarea = document.querySelector('textarea[name="greeting"]');
+    if (greetingTextarea.value.trim()) {
+        greetingEditor.root.innerHTML = greetingTextarea.value;
+    }
+
     const contractTextarea = document.querySelector('textarea[name="contract_description"]');
     if (contractTextarea.value.trim()) {
         contractEditor.root.innerHTML = contractTextarea.value;
@@ -329,6 +349,10 @@ require_once 'includes/header.php';
     }
     
     // Update textareas when content changes
+    greetingEditor.on('text-change', () => {
+        greetingTextarea.value = greetingEditor.root.innerHTML;
+    });
+
     contractEditor.on('text-change', () => {
         contractTextarea.value = contractEditor.root.innerHTML;
     });
@@ -469,6 +493,7 @@ require_once 'includes/header.php';
     
     // Sync all editors before form submission
     document.querySelector('form').addEventListener('submit', function() {
+        greetingTextarea.value = greetingEditor.root.innerHTML;
         contractTextarea.value = contractEditor.root.innerHTML;
         pdpFromTextarea.value = pdpFromEditor.root.innerHTML;
         pdpTowardTextarea.value = pdpTowardEditor.root.innerHTML;

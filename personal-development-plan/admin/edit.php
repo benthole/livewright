@@ -44,6 +44,7 @@ if ($_POST) {
     $last_name = trim($_POST['last_name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $contract_description = trim($_POST['contract_description'] ?? '');
+    $greeting = trim($_POST['greeting'] ?? '');
     $pdp_from = trim($_POST['pdp_from'] ?? '');
     $pdp_toward = trim($_POST['pdp_toward'] ?? '');
     
@@ -57,16 +58,7 @@ if ($_POST) {
     if (empty($last_name)) $errors[] = 'Last name is required';
     if (empty($email)) $errors[] = 'Email is required';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email format';
-    
-    // Check email uniqueness
-    if (!empty($email)) {
-        $stmt = $pdo->prepare("SELECT id FROM contracts WHERE email = ? AND deleted_at IS NULL" . ($contract_id ? " AND id != ?" : ""));
-        $params = [$email];
-        if ($contract_id) $params[] = $contract_id;
-        $stmt->execute($params);
-        if ($stmt->fetch()) $errors[] = 'Email already exists';
-    }
-    
+
     // Validate options
     for ($i = 1; $i <= 3; $i++) {
         $main_desc = trim($_POST["option_{$i}_desc"] ?? '');
@@ -115,8 +107,8 @@ if ($_POST) {
             
             if ($contract_id) {
                 // Update contract
-                $stmt = $pdo->prepare("UPDATE contracts SET first_name = ?, last_name = ?, email = ?, contract_description = ?, pdp_from = ?, pdp_toward = ?, option_1_minimum_months = ?, option_2_minimum_months = ?, option_3_minimum_months = ? WHERE id = ?");
-                $stmt->execute([$first_name, $last_name, $email, $contract_description, $pdp_from, $pdp_toward, $option_1_minimum, $option_2_minimum, $option_3_minimum, $contract_id]);
+                $stmt = $pdo->prepare("UPDATE contracts SET first_name = ?, last_name = ?, email = ?, greeting = ?, contract_description = ?, pdp_from = ?, pdp_toward = ?, option_1_minimum_months = ?, option_2_minimum_months = ?, option_3_minimum_months = ? WHERE id = ?");
+                $stmt->execute([$first_name, $last_name, $email, $greeting, $contract_description, $pdp_from, $pdp_toward, $option_1_minimum, $option_2_minimum, $option_3_minimum, $contract_id]);
                 
                 // Soft delete existing options
                 $stmt = $pdo->prepare("UPDATE pricing_options SET deleted_at = NOW() WHERE contract_id = ?");
@@ -124,8 +116,8 @@ if ($_POST) {
             } else {
                 // Insert new contract with unique ID
                 $unique_id = uniqid('', true);
-                $stmt = $pdo->prepare("INSERT INTO contracts (unique_id, first_name, last_name, email, contract_description, pdp_from, pdp_toward, option_1_minimum_months, option_2_minimum_months, option_3_minimum_months) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$unique_id, $first_name, $last_name, $email, $contract_description, $pdp_from, $pdp_toward, $option_1_minimum, $option_2_minimum, $option_3_minimum]);
+                $stmt = $pdo->prepare("INSERT INTO contracts (unique_id, first_name, last_name, email, greeting, contract_description, pdp_from, pdp_toward, option_1_minimum_months, option_2_minimum_months, option_3_minimum_months) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$unique_id, $first_name, $last_name, $email, $greeting, $contract_description, $pdp_from, $pdp_toward, $option_1_minimum, $option_2_minimum, $option_3_minimum]);
                 $contract_id = $pdo->lastInsertId();
             }
             
@@ -226,6 +218,7 @@ $form_data = [
     'last_name' => $_POST['last_name'] ?? ($contract['last_name'] ?? ($preset_data['last_name'] ?? '')),
     'email' => $_POST['email'] ?? ($contract['email'] ?? ($preset_data['email'] ?? '')),
     'contract_description' => $_POST['contract_description'] ?? ($contract['contract_description'] ?? ($preset_data['contract_description'] ?? '')),
+    'greeting' => $_POST['greeting'] ?? ($contract['greeting'] ?? ($preset_data['greeting'] ?? '')),
     'pdp_from' => $_POST['pdp_from'] ?? ($contract['pdp_from'] ?? ($preset_data['pdp_from'] ?? '')),
     'pdp_toward' => $_POST['pdp_toward'] ?? ($contract['pdp_toward'] ?? ($preset_data['pdp_toward'] ?? '')),
     'option_1_minimum_months' => $_POST['option_1_minimum_months'] ?? ($contract['option_1_minimum_months'] ?? ($preset_data['option_1_minimum_months'] ?? 1)),
@@ -352,7 +345,14 @@ require_once 'includes/header.php';
             <label>Email:</label>
             <input type="email" name="email" value="<?= htmlspecialchars($form_data['email']) ?>" required>
         </div>
-        
+
+        <div class="description-group">
+            <label>Greeting:</label>
+            <div id="greeting_editor" class="quill-editor"></div>
+            <textarea name="greeting" class="hidden"><?= htmlspecialchars($form_data['greeting']) ?></textarea>
+            <small style="color: #666; font-style: italic;">Shown at the top of the client's PDP page</small>
+        </div>
+
         <div class="description-group">
             <label>FROM — Present State Challenges and Opportunities:</label>
             <div id="pdp_from_editor" class="quill-editor"></div>
@@ -623,6 +623,13 @@ require_once 'includes/header.php';
         ['clean']
     ];
     
+    // Greeting editor
+    const greetingEditor = new Quill('#greeting_editor', {
+        theme: 'snow',
+        placeholder: 'Welcome message shown at the top of the PDP...',
+        modules: { toolbar: toolbarOptions }
+    });
+
     // Contract Description editor
     const contractEditor = new Quill('#contract_editor', {
         theme: 'snow',
@@ -655,6 +662,11 @@ require_once 'includes/header.php';
     }
     
     // Set initial content
+    const greetingTextarea = document.querySelector('textarea[name="greeting"]');
+    if (greetingTextarea.value.trim()) {
+        greetingEditor.root.innerHTML = greetingTextarea.value;
+    }
+
     const contractTextarea = document.querySelector('textarea[name="contract_description"]');
     if (contractTextarea.value.trim()) {
         contractEditor.root.innerHTML = contractTextarea.value;
@@ -678,6 +690,10 @@ require_once 'includes/header.php';
     }
     
     // Update textareas when content changes
+    greetingEditor.on('text-change', () => {
+        greetingTextarea.value = greetingEditor.root.innerHTML;
+    });
+
     contractEditor.on('text-change', () => {
         contractTextarea.value = contractEditor.root.innerHTML;
     });
