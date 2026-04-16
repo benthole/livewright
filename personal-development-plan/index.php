@@ -298,7 +298,7 @@ if (empty($uid)) {
                 <?php endif; ?>
 
                 <div class="contract-info">
-                    <h2>Contract Details</h2>
+                    <h2>Program Details</h2>
                     <p><strong>Client:</strong> <?= htmlspecialchars($contract['first_name'] . ' ' . $contract['last_name']) ?></p>
                     <p><strong>Email:</strong> <?= htmlspecialchars($contract['email']) ?></p>
                     <p><strong>Created:</strong> <?= date('F j, Y', strtotime($contract['created_at'])) ?></p>
