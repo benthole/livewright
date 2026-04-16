@@ -23,5 +23,5 @@ if ($contract_id && $_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 }
 
-header('Location: admin.php');
+header('Location: index.php');
 exit;
