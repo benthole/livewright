@@ -42,10 +42,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         body { font-family: Arial, sans-serif; max-width: 400px; margin: 100px auto; padding: 20px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; }
-        input[type="email"], input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; }
+        input[type="email"], input[type="password"], input[type="text"].password-input { width: 100%; padding: 8px; box-sizing: border-box; }
         .btn { padding: 10px 20px; background: #007cba; color: white; border: none; cursor: pointer; }
         .btn:hover { background: #005a87; }
         .error { color: red; margin-bottom: 15px; padding: 10px; background: #ffe0e0; border-radius: 4px; }
+        .password-wrapper { position: relative; }
+        .password-wrapper input { padding-right: 60px; }
+        .password-toggle { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); background: none; border: none; color: #007cba; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 6px; }
+        .password-toggle:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -61,10 +65,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="email" name="email" required autofocus>
         </div>
         <div class="form-group">
-            <label>Password:</label>
-            <input type="password" name="password" required>
+            <label for="password">Password:</label>
+            <div class="password-wrapper">
+                <input type="password" id="password" name="password" required>
+                <button type="button" class="password-toggle" id="password-toggle"
+                        aria-label="Show password" aria-pressed="false">Show</button>
+            </div>
         </div>
         <button type="submit" class="btn">Login</button>
     </form>
+    <script>
+        (function () {
+            var toggle = document.getElementById('password-toggle');
+            var input = document.getElementById('password');
+            if (!toggle || !input) return;
+            toggle.addEventListener('click', function () {
+                var shown = input.type === 'text';
+                input.type = shown ? 'password' : 'text';
+                toggle.textContent = shown ? 'Show' : 'Hide';
+                toggle.setAttribute('aria-label', shown ? 'Show password' : 'Hide password');
+                toggle.setAttribute('aria-pressed', shown ? 'false' : 'true');
+            });
+        })();
+    </script>
 </body>
 </html>

@@ -136,6 +136,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
         }
 
+        .password-wrapper {
+            position: relative;
+        }
+
+        .password-wrapper input {
+            padding-right: 60px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #3498db;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .password-toggle:hover {
+            background: #ecf0f1;
+        }
+
+        .password-toggle:focus {
+            outline: 2px solid #3498db;
+            outline-offset: 1px;
+        }
+
         .btn-login {
             width: 100%;
             padding: 14px;
@@ -213,8 +245,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required
-                           placeholder="Enter your password">
+                    <div class="password-wrapper">
+                        <input type="password" id="password" name="password" required
+                               placeholder="Enter your password">
+                        <button type="button" class="password-toggle" id="password-toggle"
+                                aria-label="Show password" aria-pressed="false">Show</button>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn-login">Sign In</button>
@@ -225,5 +261,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Contact your administrator if you need access.
         </div>
     </div>
+    <script>
+        (function () {
+            var toggle = document.getElementById('password-toggle');
+            var input = document.getElementById('password');
+            if (!toggle || !input) return;
+            toggle.addEventListener('click', function () {
+                var shown = input.type === 'text';
+                input.type = shown ? 'password' : 'text';
+                toggle.textContent = shown ? 'Show' : 'Hide';
+                toggle.setAttribute('aria-label', shown ? 'Show password' : 'Hide password');
+                toggle.setAttribute('aria-pressed', shown ? 'false' : 'true');
+            });
+        })();
+    </script>
 </body>
 </html>
