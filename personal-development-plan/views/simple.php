@@ -103,6 +103,55 @@ foreach ($options as $option_number => $sub_options) {
         }
         .greeting p:last-child { margin-bottom: 0; }
 
+        .pathways {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 16px;
+            align-items: stretch;
+            margin: 25px 0 10px;
+        }
+        .pathway-card {
+            background: white;
+            border: 2px solid #e6edf3;
+            border-radius: 10px;
+            padding: 20px 22px;
+            display: flex;
+            flex-direction: column;
+        }
+        .pathway-card.from { border-left: 5px solid #005FA3; }
+        .pathway-card.toward { border-left: 5px solid #2BB5B0; }
+        .pathway-label {
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.75em;
+            font-weight: 700;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .pathway-card.from .pathway-label { color: #005FA3; }
+        .pathway-card.toward .pathway-label { color: #2BB5B0; }
+        .pathway-heading {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .pathway-body { color: #444; line-height: 1.5; font-size: 0.95em; }
+        .pathway-body p:last-child { margin-bottom: 0; }
+        .pathway-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #2BB5B0;
+            font-size: 2em;
+            font-weight: 700;
+            padding: 0 4px;
+        }
+        @media (max-width: 640px) {
+            .pathways { grid-template-columns: 1fr; }
+            .pathway-arrow { transform: rotate(90deg); padding: 4px 0; }
+        }
+
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -251,6 +300,22 @@ foreach ($options as $option_number => $sub_options) {
         <div class="body-card">
             <?php if (!empty($contract['greeting'])): ?>
                 <div class="greeting"><?= $contract['greeting'] ?></div>
+            <?php endif; ?>
+
+            <?php if (!empty($contract['pdp_from']) || !empty($contract['pdp_toward'])): ?>
+                <div class="pathways">
+                    <div class="pathway-card from">
+                        <div class="pathway-label">From</div>
+                        <div class="pathway-heading">Present State Challenges &amp; Opportunities</div>
+                        <div class="pathway-body"><?= $contract['pdp_from'] ?? '' ?></div>
+                    </div>
+                    <div class="pathway-arrow" aria-hidden="true">&rarr;</div>
+                    <div class="pathway-card toward">
+                        <div class="pathway-label">Toward</div>
+                        <div class="pathway-heading">Ideal State Outcomes</div>
+                        <div class="pathway-body"><?= $contract['pdp_toward'] ?? '' ?></div>
+                    </div>
+                </div>
             <?php endif; ?>
 
             <?php if (empty($cards)): ?>
