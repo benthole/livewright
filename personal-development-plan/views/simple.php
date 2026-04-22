@@ -27,22 +27,29 @@ foreach ($options as $option_number => $sub_options) {
     }
 
     foreach ($sub_options as $sub_name => $tiers) {
-        $yearly = null;
+        $yearly = null; $monthly = null; $quarterly = null;
         foreach ($tiers as $t) {
-            if ($t['type'] === 'Yearly') { $yearly = $t; break; }
+            if ($t['type'] === 'Yearly') $yearly = $t;
+            elseif ($t['type'] === 'Monthly') $monthly = $t;
+            elseif ($t['type'] === 'Quarterly') $quarterly = $t;
         }
         if (!$yearly) continue;
 
         $monthly_equiv = $yearly['price'] / 12;
         $label = "Option $option_number";
         $card_sub_description = $sub_description;
-
-        // If this option has real sub-options (not Default), append sub-option name as the coach detail
-        if ($sub_name !== 'Default' && count($sub_options) > 1) {
-            $card_sub_description = $sub_name;
-        } elseif ($sub_name !== 'Default') {
+        if ($sub_name !== 'Default') {
             $card_sub_description = $sub_name;
         }
+
+        $build_tier = function($tier) {
+            if (!$tier) return null;
+            return [
+                'id' => (int)$tier['id'],
+                'price' => (float)$tier['price'],
+                'type' => $tier['type'],
+            ];
+        };
 
         $cards[] = [
             'option_number' => $option_number,
@@ -50,13 +57,23 @@ foreach ($options as $option_number => $sub_options) {
             'title' => $title,
             'sub_description' => $card_sub_description,
             'monthly_equiv' => $monthly_equiv,
-            'yearly_id' => $yearly['id'],
-            'yearly_price' => $yearly['price'],
-            'yearly_description' => $yearly['description'],
             'sub_option_name' => $sub_name,
+            'tiers' => [
+                'Yearly' => $build_tier($yearly),
+                'Quarterly' => $build_tier($quarterly),
+                'Monthly' => $build_tier($monthly),
+            ],
         ];
     }
 }
+
+$cards_js = array_map(function($c) {
+    return [
+        'label' => $c['label'],
+        'sub_option_name' => $c['sub_option_name'],
+        'tiers' => $c['tiers'],
+    ];
+}, $cards);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -269,6 +286,60 @@ foreach ($options as $option_number => $sub_options) {
             display: none;
         }
         .selected-option.visible { display: block; }
+
+        .billing-choice { margin: 20px 0 24px; display: none; }
+        .billing-choice.visible { display: block; }
+        .billing-choice h4 {
+            margin: 0 0 12px;
+            color: #333;
+            font-size: 1.05em;
+        }
+        .billing-tiers {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .billing-tier {
+            background: white;
+            border: 2px solid #e6edf3;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s, transform 0.05s;
+        }
+        .billing-tier:hover {
+            border-color: #005FA3;
+            box-shadow: 0 4px 12px rgba(0, 95, 163, 0.1);
+        }
+        .billing-tier.selected {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        .billing-tier .tier-label {
+            font-weight: 700;
+            color: #005FA3;
+            margin-bottom: 6px;
+            font-size: 1em;
+        }
+        .billing-tier.selected .tier-label { color: #28a745; }
+        .billing-tier .tier-price {
+            font-size: 1.35em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 2px;
+        }
+        .billing-tier .tier-detail {
+            color: #666;
+            font-size: 0.82em;
+        }
+        .billing-tier .tier-savings {
+            color: #28a745;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
         .continue-btn {
             background: #28a745;
             color: white;
@@ -327,9 +398,9 @@ foreach ($options as $option_number => $sub_options) {
                 </div>
             <?php else: ?>
                 <div class="cards-grid">
-                    <?php foreach ($cards as $card): ?>
+                    <?php foreach ($cards as $idx => $card): ?>
                         <div class="option-card"
-                             data-id="<?= (int)$card['yearly_id'] ?>"
+                             data-index="<?= (int)$idx ?>"
                              onclick="selectCard(this)">
                             <div class="card-top">
                                 <div class="card-title"><?= htmlspecialchars($card['title']) ?></div>
@@ -346,12 +417,6 @@ foreach ($options as $option_number => $sub_options) {
                             <div class="card-bottom">
                                 <button type="button">Select</button>
                             </div>
-                            <input type="hidden"
-                                   class="card-data"
-                                   data-description="<?= htmlspecialchars($card['yearly_description']) ?>"
-                                   data-price="<?= htmlspecialchars((string)$card['yearly_price']) ?>"
-                                   data-label="<?= htmlspecialchars($card['label']) ?>"
-                                   data-suboption="<?= htmlspecialchars($card['sub_option_name']) ?>">
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -364,9 +429,14 @@ foreach ($options as $option_number => $sub_options) {
                 <div class="selection-form">
                     <h3 id="form-title">Complete Your Selection</h3>
                     <div id="selected-option-display" class="selected-option">
-                        <strong>Selected:</strong> <span id="selected-name"></span><br>
-                        <strong>$<span id="selected-price"></span></strong> paid annually in advance
+                        <strong>Selected:</strong> <span id="selected-name"></span>
                     </div>
+
+                    <div class="billing-choice" id="billing-choice">
+                        <h4>Choose how you'd like to pay:</h4>
+                        <div class="billing-tiers" id="billing-tiers"></div>
+                    </div>
+
                     <form action="next.php" method="POST" onsubmit="return validateForm()">
                         <input type="hidden" name="payment_option" id="payment_option" value="">
                         <input type="hidden" name="contract_uid" value="<?= htmlspecialchars($uid) ?>">
@@ -387,25 +457,91 @@ foreach ($options as $option_number => $sub_options) {
     </div>
 
     <script>
+        var CARDS = <?= json_encode($cards_js, JSON_UNESCAPED_SLASHES) ?>;
+        var currentCardIndex = null;
+
         function selectCard(cardEl) {
             document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
             cardEl.classList.add('selected');
 
-            var id = cardEl.getAttribute('data-id');
-            var data = cardEl.querySelector('.card-data');
-            var label = data.getAttribute('data-label');
-            var suboption = data.getAttribute('data-suboption');
-            var price = parseFloat(data.getAttribute('data-price'));
+            currentCardIndex = parseInt(cardEl.getAttribute('data-index'), 10);
+            var card = CARDS[currentCardIndex];
+            if (!card) return;
 
-            var displayName = label;
-            if (suboption && suboption !== 'Default') displayName += ' — ' + suboption;
+            var displayName = card.label;
+            if (card.sub_option_name && card.sub_option_name !== 'Default') {
+                displayName += ' — ' + card.sub_option_name;
+            }
 
-            document.getElementById('payment_option').value = id;
             document.getElementById('selected-name').textContent = displayName;
-            document.getElementById('selected-price').textContent = price.toFixed(2);
             document.getElementById('selected-option-display').classList.add('visible');
-            document.getElementById('continue-btn').disabled = false;
             document.getElementById('form-title').textContent = 'Your Selection:';
+
+            // Clear any prior billing selection
+            document.getElementById('payment_option').value = '';
+            document.getElementById('continue-btn').disabled = true;
+
+            renderBillingTiers(card);
+        }
+
+        function renderBillingTiers(card) {
+            var container = document.getElementById('billing-tiers');
+            container.innerHTML = '';
+
+            var order = ['Yearly', 'Quarterly', 'Monthly'];
+            var yearlyPrice = card.tiers.Yearly ? card.tiers.Yearly.price : 0;
+
+            var details = {
+                'Yearly':    { title: 'Pay in Full',      detail: 'one-time payment for 12 months', perPeriod: 'year' },
+                'Quarterly': { title: 'Quarterly',        detail: '4 payments over 12 months',       perPeriod: 'quarter' },
+                'Monthly':   { title: 'Monthly',          detail: '12 payments over 12 months',      perPeriod: 'month' }
+            };
+
+            order.forEach(function (type) {
+                var tier = card.tiers[type];
+                if (!tier) return;
+
+                var meta = details[type];
+                var el = document.createElement('div');
+                el.className = 'billing-tier';
+                el.setAttribute('data-id', tier.id);
+                el.setAttribute('data-type', type);
+
+                var savingsHtml = '';
+                if (type !== 'Yearly' && yearlyPrice > 0) {
+                    var periods = (type === 'Monthly') ? 12 : 4;
+                    var totalAtThisRate = tier.price * periods;
+                    var savings = totalAtThisRate - yearlyPrice;
+                    if (savings > 0) {
+                        savingsHtml = '<div class="tier-savings">Save $' + formatMoney(savings) + ' with Pay in Full</div>';
+                    }
+                }
+                if (type === 'Yearly') {
+                    savingsHtml = '<div class="tier-savings">Best value</div>';
+                }
+
+                el.innerHTML =
+                    '<div class="tier-label">' + meta.title + '</div>' +
+                    '<div class="tier-price">$' + formatMoney(tier.price) + '<span style="font-size:0.7em;color:#666;font-weight:600;">/' + meta.perPeriod + '</span></div>' +
+                    '<div class="tier-detail">' + meta.detail + '</div>' +
+                    savingsHtml;
+
+                el.addEventListener('click', function () { selectBillingTier(el, tier); });
+                container.appendChild(el);
+            });
+
+            document.getElementById('billing-choice').classList.add('visible');
+        }
+
+        function selectBillingTier(el, tier) {
+            document.querySelectorAll('.billing-tier').forEach(t => t.classList.remove('selected'));
+            el.classList.add('selected');
+            document.getElementById('payment_option').value = tier.id;
+            document.getElementById('continue-btn').disabled = false;
+        }
+
+        function formatMoney(n) {
+            return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         function validateForm() {
