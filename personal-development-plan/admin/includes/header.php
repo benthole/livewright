@@ -21,9 +21,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <?php endif; ?>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #007cba;">
+    <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
-            <a class="navbar-brand" href="index.php">PDP Admin</a>
+            <a class="navbar-brand" href="index.php">LiveWright PDP</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
