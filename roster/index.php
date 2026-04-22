@@ -1084,6 +1084,7 @@ function getCustomFieldById($customFields, $fieldId) {
                     <span class="user-name"><?php echo htmlspecialchars($current_user['name']); ?></span>
                     <span class="user-role-badge role-<?php echo $current_user['role']; ?>"><?php echo ucfirst($current_user['role']); ?></span>
                 </div>
+                <a href="campaign_reports.php" class="header-link">Campaign Reports</a>
                 <?php if ($user_is_admin): ?>
                 <a href="admin/users.php" class="header-link">Manage Users</a>
                 <?php endif; ?>
