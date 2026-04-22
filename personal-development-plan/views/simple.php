@@ -35,7 +35,7 @@ foreach ($options as $option_number => $sub_options) {
             elseif ($t['type'] === 'Monthly') $monthly = $t;
             elseif ($t['type'] === 'Quarterly') $quarterly = $t;
         }
-        if (!$yearly) continue;
+        if (!$yearly || (float)$yearly['price'] <= 0) continue;
 
         $monthly_equiv = $yearly['price'] / 12;
         $label = "Option $option_number";
@@ -46,6 +46,7 @@ foreach ($options as $option_number => $sub_options) {
 
         $build_tier = function($tier) {
             if (!$tier) return null;
+            if ((float)$tier['price'] <= 0) return null;
             return [
                 'id' => (int)$tier['id'],
                 'price' => (float)$tier['price'],

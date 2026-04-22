@@ -142,6 +142,13 @@ if ($_POST) {
                     $opt_deposit = (!empty($opt_deposit) && is_numeric($opt_deposit)) ? (float)$opt_deposit : null;
                     $opt_payment_mode = $_POST["option_{$i}_payment_mode"] ?? 'recurring_immediate';
 
+                    // A price is considered "set" only when it's numeric AND > 0.
+                    // Blank or zero hides that billing tier from the PDP page.
+                    $is_price_set = function ($raw) {
+                        if ($raw === '' || !is_numeric($raw)) return false;
+                        return (float)$raw > 0;
+                    };
+
                     if ($has_sub_options) {
                         // Create entries for each sub-option
                         for ($s = 1; $s <= 10; $s++) {
@@ -150,7 +157,7 @@ if ($_POST) {
                                 $types = ['Monthly', 'Quarterly', 'Yearly'];
                                 foreach ($types as $type) {
                                     $price = trim($_POST["option_{$i}_sub_{$s}_price_" . strtolower($type)] ?? '');
-                                    if (!empty($price) && is_numeric($price)) {
+                                    if ($is_price_set($price)) {
                                         $stmt = $pdo->prepare("INSERT INTO pricing_options (contract_id, option_number, sub_option_name, description, price, deposit_amount, payment_mode, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                                         $stmt->execute([$contract_id, $i, $sub_name, $main_desc, $price, $opt_deposit, $opt_payment_mode, $type]);
                                     }
@@ -162,7 +169,7 @@ if ($_POST) {
                         $types = ['Monthly', 'Quarterly', 'Yearly'];
                         foreach ($types as $type) {
                             $price = trim($_POST["option_{$i}_price_" . strtolower($type)] ?? '');
-                            if (!empty($price) && is_numeric($price)) {
+                            if ($is_price_set($price)) {
                                 $stmt = $pdo->prepare("INSERT INTO pricing_options (contract_id, option_number, sub_option_name, description, price, deposit_amount, payment_mode, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                                 $stmt->execute([$contract_id, $i, 'Default', $main_desc, $price, $opt_deposit, $opt_payment_mode, $type]);
                             }
