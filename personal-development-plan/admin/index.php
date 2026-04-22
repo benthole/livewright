@@ -57,13 +57,17 @@ require_once 'includes/header.php';
                             <?php endif; ?>
                         </td>
                         <td class="link-cell">
-                            <div class="link-actions">
-                                <a href="https://checkout.livewright.com/personal-development-plan/?uid=<?= urlencode($contract['unique_id']) ?>" target="_blank" class="link-btn">
-                                    View
-                                </a>
-                                <button onclick="copyLink('<?= addslashes($contract['unique_id']) ?>')" class="copy-btn" id="copy-<?= $contract['id'] ?>">
-                                    Copy
-                                </button>
+                            <div class="link-actions" style="display: flex; flex-direction: column; gap: 6px;">
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span style="font-size: 0.8em; color: #666; min-width: 55px;">Classic:</span>
+                                    <a href="https://checkout.livewright.com/personal-development-plan/?uid=<?= urlencode($contract['unique_id']) ?>" target="_blank" class="link-btn">View</a>
+                                    <button onclick="copyLink('<?= addslashes($contract['unique_id']) ?>', 'classic')" class="copy-btn" id="copy-classic-<?= $contract['id'] ?>">Copy</button>
+                                </div>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span style="font-size: 0.8em; color: #666; min-width: 55px;">Simple:</span>
+                                    <a href="https://checkout.livewright.com/personal-development-plan/?uid=<?= urlencode($contract['unique_id']) ?>&skin=simple" target="_blank" class="link-btn">View</a>
+                                    <button onclick="copyLink('<?= addslashes($contract['unique_id']) ?>', 'simple')" class="copy-btn" id="copy-simple-<?= $contract['id'] ?>">Copy</button>
+                                </div>
                             </div>
                         </td>
                         <td class="actions">
@@ -77,21 +81,23 @@ require_once 'includes/header.php';
     </div>
 
     <script>
-    function copyLink(uniqueId) {
-        const url = `https://checkout.livewright.com/personal-development-plan/?uid=${uniqueId}`;
+    function copyLink(uniqueId, skin) {
+        skin = skin || 'classic';
+        let url = `https://checkout.livewright.com/personal-development-plan/?uid=${uniqueId}`;
+        if (skin === 'simple') url += '&skin=simple';
 
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(url).then(() => {
-                showCopySuccess(uniqueId);
+                showCopySuccess(uniqueId, skin);
             }).catch(() => {
-                fallbackCopyTextToClipboard(url, uniqueId);
+                fallbackCopyTextToClipboard(url, uniqueId, skin);
             });
         } else {
-            fallbackCopyTextToClipboard(url, uniqueId);
+            fallbackCopyTextToClipboard(url, uniqueId, skin);
         }
     }
 
-    function fallbackCopyTextToClipboard(text, uniqueId) {
+    function fallbackCopyTextToClipboard(text, uniqueId, skin) {
         const textArea = document.createElement("textarea");
         textArea.value = text;
         textArea.style.top = "0";
@@ -104,7 +110,7 @@ require_once 'includes/header.php';
 
         try {
             document.execCommand('copy');
-            showCopySuccess(uniqueId);
+            showCopySuccess(uniqueId, skin);
         } catch (err) {
             console.error('Fallback: Oops, unable to copy', err);
         }
@@ -112,12 +118,16 @@ require_once 'includes/header.php';
         document.body.removeChild(textArea);
     }
 
-    function showCopySuccess(uniqueId) {
-        const buttons = document.querySelectorAll('.copy-btn');
+    function showCopySuccess(uniqueId, skin) {
+        const selector = skin === 'simple'
+            ? `[id^="copy-simple-"]`
+            : `[id^="copy-classic-"]`;
+        const buttons = document.querySelectorAll(`.copy-btn${selector}, .copy-btn`);
         let targetButton = null;
 
-        buttons.forEach(button => {
-            if (button.getAttribute('onclick').includes(uniqueId)) {
+        document.querySelectorAll('.copy-btn').forEach(button => {
+            const onclick = button.getAttribute('onclick') || '';
+            if (onclick.includes(uniqueId) && onclick.includes(`'${skin}'`)) {
                 targetButton = button;
             }
         });

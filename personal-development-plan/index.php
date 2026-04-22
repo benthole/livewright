@@ -2,6 +2,7 @@
 require_once 'config.php';
 
 $uid = $_GET['uid'] ?? '';
+$skin = ($_GET['skin'] ?? '') === 'simple' ? 'simple' : 'classic';
 $contract = null;
 $options = [];
 
@@ -48,11 +49,17 @@ if (empty($uid)) {
         }
         
         // Debug: Uncomment to see structure
-        // echo '<pre style="background: #f0f0f0; padding: 20px; margin: 20px; border: 2px solid #ccc;">'; 
+        // echo '<pre style="background: #f0f0f0; padding: 20px; margin: 20px; border: 2px solid #ccc;">';
         // echo "DEBUG - Options Structure:\n";
-        // print_r($options); 
+        // print_r($options);
         // echo '</pre>';
     }
+}
+
+// Render the simple skin when ?skin=simple is passed (only when we have a contract + options)
+if ($skin === 'simple' && $contract && !empty($options)) {
+    require __DIR__ . '/views/simple.php';
+    exit;
 }
 ?>
 <!DOCTYPE html>
