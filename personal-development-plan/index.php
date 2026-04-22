@@ -1,5 +1,6 @@
 <?php
 require_once 'config.php';
+require_once __DIR__ . '/lib/pathways_default.php';
 
 $uid = $_GET['uid'] ?? '';
 $skin = ($_GET['skin'] ?? '') === 'simple' ? 'simple' : 'classic';
@@ -319,7 +320,7 @@ if ($skin === 'simple' && $contract && !empty($options)) {
                                 <div><?= $contract['pdp_from'] ?></div>
                             </div>
                         <?php endif; ?>
-                        
+
                         <?php if (!empty($contract['pdp_toward'])): ?>
                             <div class="pathway-item">
                                 <h3>TOWARD — Ideal State Outcomes</h3>
@@ -328,6 +329,12 @@ if ($skin === 'simple' && $contract && !empty($options)) {
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
+
+                <div class="pathways-section" style="border-left-color: #2BB5B0;">
+                    <div class="pathway-item">
+                        <?= pdp_resolve_pathways_html($contract) ?>
+                    </div>
+                </div>
                 
                 <?php if (!empty($contract['contract_description'])): ?>
                     <div class="contract-description">

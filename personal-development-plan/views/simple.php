@@ -9,6 +9,8 @@
  * Expects $contract, $options, $uid in scope.
  */
 
+require_once __DIR__ . '/../lib/pathways_default.php';
+
 // Flatten options → cards. Each sub-option becomes its own card;
 // options without sub-options become one card.
 $cards = [];
@@ -171,6 +173,22 @@ $cards_js = array_map(function($c) {
             .pathways { grid-template-columns: 1fr; }
             .pathway-arrow { transform: rotate(90deg); padding: 4px 0; }
         }
+
+        .pathways-detail {
+            background: white;
+            border: 2px solid #e6edf3;
+            border-left: 5px solid #2BB5B0;
+            border-radius: 10px;
+            padding: 22px 26px;
+            margin: 22px 0 8px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .pathways-detail p { margin: 0 0 10px; }
+        .pathways-detail p:last-child { margin-bottom: 0; }
+        .pathways-detail ol, .pathways-detail ul { padding-left: 24px; margin: 8px 0; }
+        .pathways-detail li { margin-bottom: 10px; }
+        .pathways-detail li:last-child { margin-bottom: 0; }
 
         .cards-grid {
             display: grid;
@@ -391,6 +409,10 @@ $cards_js = array_map(function($c) {
                     </div>
                 </div>
             <?php endif; ?>
+
+            <div class="pathways-detail">
+                <?= pdp_resolve_pathways_html($contract) ?>
+            </div>
 
             <?php if (empty($cards)): ?>
                 <div class="error">

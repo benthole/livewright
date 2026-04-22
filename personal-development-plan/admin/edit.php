@@ -1,5 +1,6 @@
 <?php
 require_once '../config.php';
+require_once __DIR__ . '/../lib/pathways_default.php';
 requireLogin();
 
 $contract_id = $_GET['id'] ?? null;
@@ -47,6 +48,7 @@ if ($_POST) {
     $greeting = trim($_POST['greeting'] ?? '');
     $pdp_from = trim($_POST['pdp_from'] ?? '');
     $pdp_toward = trim($_POST['pdp_toward'] ?? '');
+    $pathways = trim($_POST['pathways'] ?? '');
     
     // Get minimum months for each option
     $option_1_minimum = (int)($_POST['option_1_minimum_months'] ?? 1);
@@ -107,8 +109,8 @@ if ($_POST) {
             
             if ($contract_id) {
                 // Update contract
-                $stmt = $pdo->prepare("UPDATE contracts SET first_name = ?, last_name = ?, email = ?, greeting = ?, contract_description = ?, pdp_from = ?, pdp_toward = ?, option_1_minimum_months = ?, option_2_minimum_months = ?, option_3_minimum_months = ? WHERE id = ?");
-                $stmt->execute([$first_name, $last_name, $email, $greeting, $contract_description, $pdp_from, $pdp_toward, $option_1_minimum, $option_2_minimum, $option_3_minimum, $contract_id]);
+                $stmt = $pdo->prepare("UPDATE contracts SET first_name = ?, last_name = ?, email = ?, greeting = ?, contract_description = ?, pdp_from = ?, pdp_toward = ?, pathways = ?, option_1_minimum_months = ?, option_2_minimum_months = ?, option_3_minimum_months = ? WHERE id = ?");
+                $stmt->execute([$first_name, $last_name, $email, $greeting, $contract_description, $pdp_from, $pdp_toward, $pathways, $option_1_minimum, $option_2_minimum, $option_3_minimum, $contract_id]);
                 
                 // Soft delete existing options
                 $stmt = $pdo->prepare("UPDATE pricing_options SET deleted_at = NOW() WHERE contract_id = ?");
@@ -116,8 +118,8 @@ if ($_POST) {
             } else {
                 // Insert new contract with unique ID
                 $unique_id = uniqid('', true);
-                $stmt = $pdo->prepare("INSERT INTO contracts (unique_id, first_name, last_name, email, greeting, contract_description, pdp_from, pdp_toward, option_1_minimum_months, option_2_minimum_months, option_3_minimum_months) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$unique_id, $first_name, $last_name, $email, $greeting, $contract_description, $pdp_from, $pdp_toward, $option_1_minimum, $option_2_minimum, $option_3_minimum]);
+                $stmt = $pdo->prepare("INSERT INTO contracts (unique_id, first_name, last_name, email, greeting, contract_description, pdp_from, pdp_toward, pathways, option_1_minimum_months, option_2_minimum_months, option_3_minimum_months) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$unique_id, $first_name, $last_name, $email, $greeting, $contract_description, $pdp_from, $pdp_toward, $pathways, $option_1_minimum, $option_2_minimum, $option_3_minimum]);
                 $contract_id = $pdo->lastInsertId();
             }
             
@@ -221,6 +223,7 @@ $form_data = [
     'greeting' => $_POST['greeting'] ?? ($contract['greeting'] ?? ($preset_data['greeting'] ?? '')),
     'pdp_from' => $_POST['pdp_from'] ?? ($contract['pdp_from'] ?? ($preset_data['pdp_from'] ?? '')),
     'pdp_toward' => $_POST['pdp_toward'] ?? ($contract['pdp_toward'] ?? ($preset_data['pdp_toward'] ?? '')),
+    'pathways' => $_POST['pathways'] ?? ($contract['pathways'] ?? ($preset_data['pathways'] ?? pdp_default_pathways_html())),
     'option_1_minimum_months' => $_POST['option_1_minimum_months'] ?? ($contract['option_1_minimum_months'] ?? ($preset_data['option_1_minimum_months'] ?? 1)),
     'option_2_minimum_months' => $_POST['option_2_minimum_months'] ?? ($contract['option_2_minimum_months'] ?? ($preset_data['option_2_minimum_months'] ?? 1)),
     'option_3_minimum_months' => $_POST['option_3_minimum_months'] ?? ($contract['option_3_minimum_months'] ?? ($preset_data['option_3_minimum_months'] ?? 1))
@@ -364,7 +367,15 @@ require_once 'includes/header.php';
             <div id="pdp_toward_editor" class="quill-editor"></div>
             <textarea name="pdp_toward" class="hidden"><?= htmlspecialchars($form_data['pdp_toward']) ?></textarea>
         </div>
-        
+
+        <div class="description-group">
+            <label>Pathways to Career, Personal, and Relationship Fulfillment:
+                <button type="button" id="pathways-reset-btn" class="btn btn-sm btn-secondary" style="margin-left: 10px;">Reset to default</button>
+            </label>
+            <div id="pathways_editor" class="quill-editor"></div>
+            <textarea name="pathways" class="hidden"><?= htmlspecialchars($form_data['pathways']) ?></textarea>
+        </div>
+
         <div class="description-group">
             <label>Included in Each Option:</label>
             <div id="contract_editor" class="quill-editor"></div>
@@ -650,6 +661,14 @@ require_once 'includes/header.php';
         placeholder: 'Describe ideal state outcomes...',
         modules: { toolbar: toolbarOptions }
     });
+
+    // Pathways editor
+    const pathwaysEditor = new Quill('#pathways_editor', {
+        theme: 'snow',
+        placeholder: 'Pathways to Career, Personal, and Relationship Fulfillment...',
+        modules: { toolbar: toolbarOptions }
+    });
+    const PATHWAYS_DEFAULT_HTML = <?= json_encode(pdp_default_pathways_html(), JSON_UNESCAPED_SLASHES) ?>;
     
     // Option Description editors
     const optionEditors = {};
@@ -681,6 +700,15 @@ require_once 'includes/header.php';
     if (pdpTowardTextarea.value.trim()) {
         pdpTowardEditor.root.innerHTML = pdpTowardTextarea.value;
     }
+
+    const pathwaysTextarea = document.querySelector('textarea[name="pathways"]');
+    if (pathwaysTextarea.value.trim()) {
+        pathwaysEditor.root.innerHTML = pathwaysTextarea.value;
+    }
+    document.getElementById('pathways-reset-btn').addEventListener('click', function () {
+        pathwaysEditor.root.innerHTML = PATHWAYS_DEFAULT_HTML;
+        pathwaysTextarea.value = PATHWAYS_DEFAULT_HTML;
+    });
     
     for (let i = 1; i <= 3; i++) {
         const textarea = document.querySelector(`textarea[name="option_${i}_desc"]`);
@@ -704,6 +732,10 @@ require_once 'includes/header.php';
     
     pdpTowardEditor.on('text-change', () => {
         pdpTowardTextarea.value = pdpTowardEditor.root.innerHTML;
+    });
+
+    pathwaysEditor.on('text-change', () => {
+        pathwaysTextarea.value = pathwaysEditor.root.innerHTML;
     });
     
     for (let i = 1; i <= 3; i++) {
