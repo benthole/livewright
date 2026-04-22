@@ -138,6 +138,9 @@ foreach ($options as $option_number => $sub_options) {
         }
         .pathway-body { color: #444; line-height: 1.5; font-size: 0.95em; }
         .pathway-body p:last-child { margin-bottom: 0; }
+        .pathway-body ul, .pathway-body ol { padding-left: 22px; margin: 6px 0; }
+        .pathway-body li { margin-bottom: 10px; }
+        .pathway-body li:last-child { margin-bottom: 0; }
         .pathway-arrow {
             display: flex;
             align-items: center;
