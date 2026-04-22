@@ -24,6 +24,10 @@ require_once 'includes/header.php';
             </div>
         </div>
 
+        <?php if (!empty($_GET['deleted'])): ?>
+            <div class="alert alert-success">Plan moved to Trash. <a href="trash.php">View Trash</a>.</div>
+        <?php endif; ?>
+
         <table>
             <thead>
                 <tr>
@@ -72,7 +76,7 @@ require_once 'includes/header.php';
                         </td>
                         <td class="actions">
                             <a href="edit.php?id=<?= $contract['id'] ?>" class="btn">Edit</a>
-                            <a href="delete.php?id=<?= $contract['id'] ?>" class="btn btn-danger" onclick="return confirm('Delete this plan?')">Delete</a>
+                            <a href="delete.php?id=<?= $contract['id'] ?>" class="btn btn-danger">Delete</a>
                         </td>
                     </tr>
                 <?php endforeach; ?>

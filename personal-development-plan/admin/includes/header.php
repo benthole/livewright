@@ -41,6 +41,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     <li class="nav-item">
                         <a class="nav-link <?= $current_page === 'coaching-rates.php' ? 'active' : '' ?>" href="coaching-rates.php">Coaching Rates</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= $current_page === 'trash.php' ? 'active' : '' ?>" href="trash.php">Trash</a>
+                    </li>
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item">
