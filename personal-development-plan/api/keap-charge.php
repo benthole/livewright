@@ -151,7 +151,7 @@ try {
 
     // Record payment locally
     $paymentType = $is_deposit ? 'deposit' : 'one_time';
-    pdp_record_payment($pdo, [
+    $payment_id = pdp_record_payment($pdo, [
         'contract_id' => $contract['id'],
         'pricing_option_id' => $pricing_option_id,
         'keap_order_id' => $orderId,
@@ -177,13 +177,19 @@ try {
 
     $pdo->commit();
 
-    // Generate signed-agreement PDF + send confirmation email.
+    // Generate signed-agreement PDF + invoice PDF and send confirmation emails.
     // Failures are logged but do not block the success response.
     try {
         require_once __DIR__ . '/../lib/agreement-finalize.php';
         pdp_finalize_agreement($pdo, (int)$contract['id']);
     } catch (Throwable $e) {
-        error_log('keap-charge.php finalize error: ' . $e->getMessage());
+        error_log('keap-charge.php agreement finalize error: ' . $e->getMessage());
+    }
+    try {
+        require_once __DIR__ . '/../lib/invoice-finalize.php';
+        pdp_finalize_invoice($pdo, (int)$payment_id);
+    } catch (Throwable $e) {
+        error_log('keap-charge.php invoice finalize error: ' . $e->getMessage());
     }
 
     echo json_encode([

@@ -131,13 +131,19 @@ try {
 
     $pdo->commit();
 
-    // Generate signed-agreement PDF + send confirmation email.
+    // Generate signed-agreement PDF + invoice PDF and send confirmation emails.
     // Failures are logged but do not block the success response.
     try {
         require_once __DIR__ . '/../lib/agreement-finalize.php';
         pdp_finalize_agreement($pdo, (int)$contract['id']);
     } catch (Throwable $e) {
-        error_log('confirm-payment.php finalize error: ' . $e->getMessage());
+        error_log('confirm-payment.php agreement finalize error: ' . $e->getMessage());
+    }
+    try {
+        require_once __DIR__ . '/../lib/invoice-finalize.php';
+        pdp_finalize_invoice($pdo, (int)$payment_id);
+    } catch (Throwable $e) {
+        error_log('confirm-payment.php invoice finalize error: ' . $e->getMessage());
     }
 
     echo json_encode([
