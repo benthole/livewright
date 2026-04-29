@@ -31,6 +31,9 @@ Thumbs.db
 # Logs
 *.log
 
+# Generated agreement PDFs (server-only, persists across deploys)
+personal-development-plan/storage/
+
 # Environment files
 .env
 .env.*

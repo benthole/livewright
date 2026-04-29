@@ -2,12 +2,18 @@
 require_once '../config.php';
 requireLogin();
 
-// Get all contracts
+// Get all contracts (with selected plan info if signed)
 $stmt = $pdo->prepare("
-    SELECT id, unique_id, first_name, last_name, email, signed, created_at
-    FROM contracts
-    WHERE deleted_at IS NULL
-    ORDER BY id DESC
+    SELECT c.id, c.unique_id, c.first_name, c.last_name, c.email, c.signed, c.created_at,
+           c.selected_option_id, c.agreement_pdf_path, c.agreement_email_sent_at,
+           po.option_number AS selected_option_number,
+           po.sub_option_name AS selected_sub_option_name,
+           po.type AS selected_type,
+           po.price AS selected_price
+    FROM contracts c
+    LEFT JOIN pricing_options po ON po.id = c.selected_option_id
+    WHERE c.deleted_at IS NULL
+    ORDER BY c.id DESC
 ");
 $stmt->execute();
 $contracts = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -36,6 +42,7 @@ require_once 'includes/header.php';
                     <th>Email</th>
                     <th>Date Created</th>
                     <th>Signed</th>
+                    <th>Selected Plan</th>
                     <th>Link</th>
                     <th>Actions</th>
                 </tr>
@@ -43,7 +50,7 @@ require_once 'includes/header.php';
             <tbody>
                 <?php if (empty($contracts)): ?>
                     <tr>
-                        <td colspan="7" style="text-align: center;">No plans found</td>
+                        <td colspan="8" style="text-align: center;">No plans found</td>
                     </tr>
                 <?php endif; ?>
 
@@ -56,6 +63,22 @@ require_once 'includes/header.php';
                         <td>
                             <?php if ($contract['signed']): ?>
                                 <span class="signed-icon">✓</span>
+                            <?php else: ?>
+                                <span class="unsigned">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="selected-plan-cell">
+                            <?php if (!empty($contract['selected_option_id'])): ?>
+                                <div style="font-size: 0.9em;">
+                                    <strong>Option <?= (int)$contract['selected_option_number'] ?></strong>
+                                    <?php if (!empty($contract['selected_sub_option_name']) && $contract['selected_sub_option_name'] !== 'Default'): ?>
+                                        — <?= htmlspecialchars($contract['selected_sub_option_name']) ?>
+                                    <?php endif; ?>
+                                    <div style="color: #6e6e73; font-size: 0.92em; margin-top: 2px;">
+                                        $<?= number_format((float)$contract['selected_price'], 2) ?>
+                                        / <?= htmlspecialchars($contract['selected_type']) ?>
+                                    </div>
+                                </div>
                             <?php else: ?>
                                 <span class="unsigned">—</span>
                             <?php endif; ?>
@@ -76,6 +99,9 @@ require_once 'includes/header.php';
                         </td>
                         <td class="actions">
                             <a href="edit.php?id=<?= $contract['id'] ?>" class="btn">Edit</a>
+                            <?php if (!empty($contract['agreement_pdf_path'])): ?>
+                                <a href="../agreement.php?uid=<?= urlencode($contract['unique_id']) ?>" target="_blank" class="btn">Agreement PDF</a>
+                            <?php endif; ?>
                             <a href="delete.php?id=<?= $contract['id'] ?>" class="btn btn-danger">Delete</a>
                         </td>
                     </tr>

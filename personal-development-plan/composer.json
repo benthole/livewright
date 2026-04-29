@@ -2,7 +2,8 @@
     "name": "livewright/pdp",
     "description": "LiveWright Personal Development Plan - Payment Processing",
     "require": {
-        "stripe/stripe-php": "^13.0"
+        "stripe/stripe-php": "^13.0",
+        "dompdf/dompdf": "^3.1"
     },
     "config": {
         "optimize-autoloader": true
