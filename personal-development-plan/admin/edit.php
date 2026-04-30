@@ -203,9 +203,10 @@ if ($_POST) {
                 }
             }
 
-            // Update contract with support packages JSON
+            // Update contract with support packages JSON and bump modified timestamp
+            // (explicit NOW() ensures updated_at moves even when no other column actually changed)
             $support_packages_json = !empty($support_packages) ? json_encode($support_packages) : null;
-            $stmt = $pdo->prepare("UPDATE contracts SET support_packages = ? WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE contracts SET support_packages = ?, updated_at = NOW() WHERE id = ?");
             $stmt->execute([$support_packages_json, $contract_id]);
 
             $pdo->commit();

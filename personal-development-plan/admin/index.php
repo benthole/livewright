@@ -9,6 +9,22 @@ if (!in_array($status, $validStatuses, true)) {
     $status = 'all';
 }
 
+// ---- Sort ----
+// Whitelist of sortable columns -> SQL expression. Default to date modified DESC
+// so the most-recently-edited plans surface first.
+$sortMap = [
+    'modified'   => 'c.updated_at',
+    'created'    => 'c.created_at',
+    'first_name' => 'c.first_name',
+    'last_name'  => 'c.last_name',
+    'email'      => 'c.email',
+    'status'     => 'c.signed',
+];
+$sort = $_GET['sort'] ?? 'modified';
+if (!isset($sortMap[$sort])) $sort = 'modified';
+$dir = (strtolower($_GET['dir'] ?? 'desc') === 'asc') ? 'ASC' : 'DESC';
+$orderExpr = $sortMap[$sort] . ' ' . $dir . ', c.id DESC';
+
 // ---- Counts (drive tab badges) ----
 $counts = ['all' => 0, 'pending' => 0, 'signed' => 0];
 $countStmt = $pdo->query("
@@ -34,7 +50,7 @@ if ($status === 'signed') {
 }
 
 $stmt = $pdo->prepare("
-    SELECT c.id, c.unique_id, c.first_name, c.last_name, c.email, c.signed, c.created_at,
+    SELECT c.id, c.unique_id, c.first_name, c.last_name, c.email, c.signed, c.created_at, c.updated_at,
            c.selected_option_id, c.agreement_pdf_path, c.agreement_email_sent_at,
            po.option_number AS selected_option_number,
            po.sub_option_name AS selected_sub_option_name,
@@ -43,7 +59,7 @@ $stmt = $pdo->prepare("
     FROM contracts c
     LEFT JOIN pricing_options po ON po.id = c.selected_option_id
     WHERE $where
-    ORDER BY c.id DESC
+    ORDER BY $orderExpr
 ");
 $stmt->execute();
 $contracts = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -72,7 +88,7 @@ $tabs = [
 
         <nav class="tab-nav" role="tablist" aria-label="Filter plans">
             <?php foreach ($tabs as $key => $label): ?>
-                <a href="?status=<?= urlencode($key) ?>"
+                <a href="?status=<?= urlencode($key) ?>&sort=<?= urlencode($sort) ?>&dir=<?= urlencode(strtolower($dir)) ?>"
                    class="<?= $status === $key ? 'active' : '' ?>"
                    role="tab"
                    aria-selected="<?= $status === $key ? 'true' : 'false' ?>">
@@ -82,14 +98,26 @@ $tabs = [
             <?php endforeach; ?>
         </nav>
 
+        <?php
+        // Helper: build a sort header link that toggles direction when re-clicking the active column.
+        $sortLink = function ($key, $label) use ($sort, $dir, $status) {
+            $isActive = ($sort === $key);
+            $nextDir  = ($isActive && $dir === 'DESC') ? 'asc' : 'desc';
+            $arrow    = $isActive ? ($dir === 'DESC' ? ' ▼' : ' ▲') : '';
+            $url = '?status=' . urlencode($status) . '&sort=' . urlencode($key) . '&dir=' . $nextDir;
+            return '<a href="' . htmlspecialchars($url) . '" style="color:inherit;text-decoration:none;">'
+                . htmlspecialchars($label) . $arrow . '</a>';
+        };
+        ?>
         <table>
             <thead>
                 <tr>
-                    <th>First Name</th>
-                    <th>Last Name</th>
-                    <th>Email</th>
-                    <th>Date Created</th>
-                    <th>Status</th>
+                    <th><?= $sortLink('first_name', 'First Name') ?></th>
+                    <th><?= $sortLink('last_name', 'Last Name') ?></th>
+                    <th><?= $sortLink('email', 'Email') ?></th>
+                    <th><?= $sortLink('created', 'Date Created') ?></th>
+                    <th><?= $sortLink('modified', 'Date Modified') ?></th>
+                    <th><?= $sortLink('status', 'Status') ?></th>
                     <th>Selected Plan</th>
                     <th>Link</th>
                     <th>Actions</th>
@@ -98,7 +126,7 @@ $tabs = [
             <tbody>
                 <?php if (empty($contracts)): ?>
                     <tr>
-                        <td colspan="8" style="text-align: center; color: var(--ink-500); padding: 32px 0;">
+                        <td colspan="9" style="text-align: center; color: var(--ink-500); padding: 32px 0;">
                             <?php
                             switch ($status) {
                                 case 'signed':  echo 'No signed plans yet.'; break;
@@ -116,6 +144,9 @@ $tabs = [
                         <td><?= htmlspecialchars($contract['last_name']) ?></td>
                         <td><?= htmlspecialchars($contract['email']) ?></td>
                         <td class="date-cell"><?= date('M j, Y', strtotime($contract['created_at'])) ?></td>
+                        <td class="date-cell">
+                            <?= !empty($contract['updated_at']) ? date('M j, Y', strtotime($contract['updated_at'])) : '—' ?>
+                        </td>
                         <td>
                             <?php if ($contract['signed']): ?>
                                 <span class="status-pill is-signed">Signed</span>

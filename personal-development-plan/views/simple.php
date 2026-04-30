@@ -35,9 +35,22 @@ foreach ($options as $option_number => $sub_options) {
             elseif ($t['type'] === 'Monthly') $monthly = $t;
             elseif ($t['type'] === 'Quarterly') $quarterly = $t;
         }
-        if (!$yearly || (float)$yearly['price'] <= 0) continue;
 
-        $monthly_equiv = $yearly['price'] / 12;
+        // Skip only if there is literally no priced tier at all.
+        $yearly_price = ($yearly && (float)$yearly['price'] > 0) ? (float)$yearly['price'] : 0;
+        $monthly_price = ($monthly && (float)$monthly['price'] > 0) ? (float)$monthly['price'] : 0;
+        $quarterly_price = ($quarterly && (float)$quarterly['price'] > 0) ? (float)$quarterly['price'] : 0;
+        if ($yearly_price <= 0 && $monthly_price <= 0 && $quarterly_price <= 0) continue;
+
+        // Display monthly equivalent. Prefer Yearly/12, else Monthly, else Quarterly/3.
+        if ($yearly_price > 0) {
+            $monthly_equiv = $yearly_price / 12;
+        } elseif ($monthly_price > 0) {
+            $monthly_equiv = $monthly_price;
+        } else {
+            $monthly_equiv = $quarterly_price / 3;
+        }
+
         $label = "Option $option_number";
         $card_sub_description = $sub_description;
         if ($sub_name !== 'Default') {
