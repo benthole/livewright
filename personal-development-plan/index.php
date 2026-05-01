@@ -3,7 +3,14 @@ require_once 'config.php';
 require_once __DIR__ . '/lib/pathways_default.php';
 
 $uid = $_GET['uid'] ?? '';
-$skin = ($_GET['skin'] ?? '') === 'simple' ? 'simple' : 'classic';
+$skin_param = $_GET['skin'] ?? '';
+if ($skin_param === 'simple') {
+    $skin = 'simple';
+} elseif ($skin_param === 'wright') {
+    $skin = 'wright';
+} else {
+    $skin = 'classic';
+}
 $contract = null;
 $options = [];
 
@@ -60,6 +67,12 @@ if (empty($uid)) {
 // Render the simple skin when ?skin=simple is passed (only when we have a contract + options)
 if ($skin === 'simple' && $contract && !empty($options)) {
     require __DIR__ . '/views/simple.php';
+    exit;
+}
+
+// Render the Wright coaching skin when ?skin=wright is passed
+if ($skin === 'wright' && $contract && !empty($options)) {
+    require __DIR__ . '/views/wright-coaching.php';
     exit;
 }
 ?>
