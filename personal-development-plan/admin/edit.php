@@ -401,12 +401,6 @@ require_once 'includes/header.php';
                     <textarea name="option_<?= $i ?>_desc" class="hidden"><?= htmlspecialchars($form_options[$i]['desc']) ?></textarea>
                 </div>
                 
-                <div class="option-minimum">
-                    <label>Minimum commitment for this option:
-                        <input type="number" min="1" name="option_<?= $i ?>_minimum_months" value="<?= htmlspecialchars($form_data["option_{$i}_minimum_months"]) ?>"> months
-                    </label>
-                </div>
-
                 <div class="payment-config">
                     <h5>Payment Configuration (Stripe)</h5>
                     <div class="payment-config-grid">
@@ -451,7 +445,7 @@ require_once 'includes/header.php';
                         </div>
                         <div style="margin-top:10px;">
                             <button type="button" class="add-sub-option" style="background:#17a2b8;font-size:0.85em;padding:5px 12px;" onclick="autoCalcPricing(<?= $i ?>)">Auto-calculate from Pay in Full</button>
-                            <span style="color:#999;font-size:0.85em;margin-left:8px;">Sets Monthly = Annual/12, Quarterly = Annual/4</span>
+                            <span style="color:#999;font-size:0.85em;margin-left:8px;">Sets Quarterly = Annual/4 + 5%, Monthly = Annual/12 + 10%</span>
                         </div>
                     <?php
                     } else {
@@ -763,7 +757,9 @@ require_once 'includes/header.php';
         }
     }
     
-    // Auto-calculate pricing from Pay in Full (no markup - simple division)
+    // Auto-calculate pricing from Pay in Full
+    // Quarterly = annual / 4 * 1.05  (5% markup for splitting into 4 payments)
+    // Monthly   = annual / 12 * 1.10 (10% markup for splitting into 12 payments)
     function autoCalcPricing(optionNumber) {
         const yearlyInput = document.querySelector(`.yearly-price-${optionNumber}`);
         const quarterlyInput = document.querySelector(`.quarterly-price-${optionNumber}`);
@@ -772,8 +768,8 @@ require_once 'includes/header.php';
         const yearly = parseFloat(yearlyInput.value) || 0;
 
         if (yearly > 0) {
-            const monthly = Math.round(yearly / 12 * 100) / 100;
-            const quarterly = Math.round(yearly / 4 * 100) / 100;
+            const monthly = Math.round(yearly / 12 * 1.10 * 100) / 100;
+            const quarterly = Math.round(yearly / 4 * 1.05 * 100) / 100;
 
             monthlyInput.value = monthly.toFixed(2);
             quarterlyInput.value = quarterly.toFixed(2);
@@ -853,7 +849,7 @@ require_once 'includes/header.php';
                 </div>
                 <div style="margin-top:10px;">
                     <button type="button" class="add-sub-option" style="background:#17a2b8;font-size:0.85em;padding:5px 12px;" onclick="autoCalcPricing(${optionNumber})">Auto-calculate from Pay in Full</button>
-                    <span style="color:#999;font-size:0.85em;margin-left:8px;">Sets Monthly = Annual/12, Quarterly = Annual/4</span>
+                    <span style="color:#999;font-size:0.85em;margin-left:8px;">Sets Quarterly = Annual/4 + 5%, Monthly = Annual/12 + 10%</span>
                 </div>
             `;
             container.innerHTML = simplePricingHtml;

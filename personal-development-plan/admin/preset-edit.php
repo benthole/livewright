@@ -381,7 +381,9 @@ require_once 'includes/header.php';
         }
     }
     
-    // Auto-calculate pricing from Pay in Full (no markup - simple division)
+    // Auto-calculate pricing from Pay in Full
+    // Quarterly = annual / 4 * 1.05  (5% markup for splitting into 4 payments)
+    // Monthly   = annual / 12 * 1.10 (10% markup for splitting into 12 payments)
     function autoCalcPricing(optionNumber) {
         const yearlyInput = document.querySelector(`input[name="option_${optionNumber}_price_yearly"]`);
         const quarterlyInput = document.querySelector(`input[name="option_${optionNumber}_price_quarterly"]`);
@@ -392,8 +394,8 @@ require_once 'includes/header.php';
         const yearly = parseFloat(yearlyInput.value) || 0;
 
         if (yearly > 0) {
-            const monthly = Math.round(yearly / 12 * 100) / 100;
-            const quarterly = Math.round(yearly / 4 * 100) / 100;
+            const monthly = Math.round(yearly / 12 * 1.10 * 100) / 100;
+            const quarterly = Math.round(yearly / 4 * 1.05 * 100) / 100;
 
             monthlyInput.value = monthly.toFixed(2);
             quarterlyInput.value = quarterly.toFixed(2);
