@@ -40,21 +40,25 @@ function pdp_agreement_html(array $contract, array $option, ?string $pathwaysHtm
     $price = number_format($priceRaw, 2);
     $type = $option['type'] ?? '';
 
-    // Initial payment + first-recurring breakdown
+    // Initial payment + first-recurring breakdown.
+    // Business rule: deposit only applies to Monthly billing. Yearly + Quarterly
+    // are charged in full / per period — no deposit even if one is stored on
+    // the option row.
     $paymentMode = $option['payment_mode'] ?? 'recurring_immediate';
     $depositRaw = isset($option['deposit_amount']) && $option['deposit_amount'] !== null
         ? (float)$option['deposit_amount']
         : null;
 
-    if ($paymentMode === 'deposit_only') {
+    if ($type === 'Monthly' && $depositRaw !== null && $depositRaw > 0) {
+        $initialPaymentRaw = $depositRaw;
+        $remainingFirstRaw = $priceRaw;
+        $initialLabel = 'Initial payment at signing';
+    } elseif ($paymentMode === 'deposit_only') {
         $initialPaymentRaw = $depositRaw ?? $priceRaw;
         $remainingFirstRaw = 0.0;
         $initialLabel = 'Deposit (one-time)';
-    } elseif ($paymentMode === 'deposit_and_recurring') {
-        $initialPaymentRaw = $depositRaw ?? $priceRaw;
-        $remainingFirstRaw = $priceRaw;
-        $initialLabel = 'Deposit at signing';
-    } else { // recurring_immediate
+    } else {
+        // Yearly, Quarterly, or Monthly without a deposit — charge first period now.
         $initialPaymentRaw = $priceRaw;
         $remainingFirstRaw = 0.0;
         $initialLabel = 'First payment (charged at signing)';
@@ -65,7 +69,13 @@ function pdp_agreement_html(array $contract, array $option, ?string $pathwaysHtm
         : '';
 
     $pathways = $pathwaysHtml ?: pdp_resolve_pathways_html($contract);
-    $terms = pdp_terms_html();
+
+    // Operating Agreements only — Service Agreement and beyond are intentionally
+    // omitted from the PDF (the page no longer asks the client to sign off on
+    // a separate Terms of Service block).
+    $termsFull = pdp_terms_html();
+    $svcPos = stripos($termsFull, '<h3>Service Agreement');
+    $terms = $svcPos !== false ? substr($termsFull, 0, $svcPos) : $termsFull;
 
     ob_start(); ?>
 <!DOCTYPE html>
@@ -197,7 +207,6 @@ function pdp_agreement_html(array $contract, array $option, ?string $pathwaysHtm
 <div><?= $pathways ?></div>
 <?php endif; ?>
 
-<h2>Terms of Service &amp; Operating Agreements</h2>
 <div class="terms"><?= $terms ?></div>
 
 <div class="footer-sig">

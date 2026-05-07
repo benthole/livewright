@@ -442,11 +442,17 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                                                             <div class="type">monthly for 12 months</div>
                                                             <div class="price-details">12 payments of $<?= number_format($monthly_tier['price'], 2) ?></div>
                                                             <?php
+                                                            // Deposit only applies to Monthly billing. If a deposit is configured,
+                                                            // it is collected up front and then the monthly subscription kicks in.
                                                             $deposit = (float)($monthly_tier['deposit_amount'] ?? 0);
-                                                            $pmode = $monthly_tier['payment_mode'] ?? 'recurring_immediate';
-                                                            if ($deposit > 0 && $pmode !== 'recurring_immediate'):
+                                                            if ($deposit > 0):
                                                             ?>
-                                                                <div class="price-details" style="color: #005FA3; margin-top: 5px;">Deposit: $<?= number_format($deposit, 2) ?> due at sign-up</div>
+                                                                <div class="price-details" style="color: #005FA3; margin-top: 8px; font-weight: 600;">
+                                                                    Initial payment due today: $<?= number_format($deposit, 2) ?>
+                                                                </div>
+                                                                <div class="price-details" style="color: #6e6e73; margin-top: 2px;">
+                                                                    then $<?= number_format($monthly_tier['price'], 2) ?>/mo for the next 12 months
+                                                                </div>
                                                             <?php endif; ?>
                                                         </div>
                                                     <?php endif; ?>
@@ -517,10 +523,14 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                                                     <div class="price-details">12 payments of $<?= number_format($monthly_tier['price'], 2) ?></div>
                                                     <?php
                                                     $m_deposit = (float)($monthly_tier['deposit_amount'] ?? 0);
-                                                    $m_pmode = $monthly_tier['payment_mode'] ?? 'recurring_immediate';
-                                                    if ($m_deposit > 0 && $m_pmode !== 'recurring_immediate'):
+                                                    if ($m_deposit > 0):
                                                     ?>
-                                                        <div class="price-details" style="color: #005FA3; margin-top: 5px;">Deposit: $<?= number_format($m_deposit, 2) ?> due at sign-up</div>
+                                                        <div class="price-details" style="color: #005FA3; margin-top: 8px; font-weight: 600;">
+                                                            Initial payment due today: $<?= number_format($m_deposit, 2) ?>
+                                                        </div>
+                                                        <div class="price-details" style="color: #6e6e73; margin-top: 2px;">
+                                                            then $<?= number_format($monthly_tier['price'], 2) ?>/mo for the next 12 months
+                                                        </div>
                                                     <?php endif; ?>
                                                 </div>
                                             </div>

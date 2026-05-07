@@ -76,6 +76,20 @@ try {
     $price = (float)$option['price'];
     $type = $option['type']; // Monthly, Quarterly, Yearly
 
+    // Business rule: a deposit is only required when the client picks Monthly.
+    //   - Pay in Full / Quarterly: charge as normal (no deposit).
+    //   - Monthly + deposit configured: always charge deposit up front then start
+    //     the recurring subscription, even if the admin left payment_mode on
+    //     "recurring_immediate" (which used to suppress the deposit).
+    if ($type !== 'Monthly') {
+        $deposit_amount = 0;
+        if ($payment_mode === 'deposit_and_recurring') {
+            $payment_mode = 'recurring_immediate';
+        }
+    } elseif ($deposit_amount > 0 && $payment_mode === 'recurring_immediate') {
+        $payment_mode = 'deposit_and_recurring';
+    }
+
     $response = [
         'customer_id' => $customer->id,
         'payment_mode' => $payment_mode,
