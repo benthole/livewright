@@ -36,8 +36,33 @@ function pdp_agreement_html(array $contract, array $option, ?string $pathwaysHtm
     $optionNumber = (int)($option['option_number'] ?? 0);
     $subOptionName = $option['sub_option_name'] ?? '';
     $optionDescription = $option['description'] ?? '';
-    $price = number_format((float)($option['price'] ?? 0), 2);
+    $priceRaw = (float)($option['price'] ?? 0);
+    $price = number_format($priceRaw, 2);
     $type = $option['type'] ?? '';
+
+    // Initial payment + first-recurring breakdown
+    $paymentMode = $option['payment_mode'] ?? 'recurring_immediate';
+    $depositRaw = isset($option['deposit_amount']) && $option['deposit_amount'] !== null
+        ? (float)$option['deposit_amount']
+        : null;
+
+    if ($paymentMode === 'deposit_only') {
+        $initialPaymentRaw = $depositRaw ?? $priceRaw;
+        $remainingFirstRaw = 0.0;
+        $initialLabel = 'Deposit (one-time)';
+    } elseif ($paymentMode === 'deposit_and_recurring') {
+        $initialPaymentRaw = $depositRaw ?? $priceRaw;
+        $remainingFirstRaw = $priceRaw;
+        $initialLabel = 'Deposit at signing';
+    } else { // recurring_immediate
+        $initialPaymentRaw = $priceRaw;
+        $remainingFirstRaw = 0.0;
+        $initialLabel = 'First payment (charged at signing)';
+    }
+
+    $programStart = !empty($contract['program_start_date'])
+        ? date('F j, Y', strtotime($contract['program_start_date']))
+        : '';
 
     $pathways = $pathwaysHtml ?: pdp_resolve_pathways_html($contract);
     $terms = pdp_terms_html();
@@ -57,6 +82,11 @@ function pdp_agreement_html(array $contract, array $option, ?string $pathwaysHtm
         color: #1d1d1f;
     }
     h1 { font-size: 20pt; color: #005FA3; margin: 0 0 4px; }
+    .header-table { width: 100%; border-collapse: collapse; }
+    .header-table td { vertical-align: middle; padding: 0; }
+    .header-logo { width: 160px; }
+    .header-logo img { max-width: 160px; height: auto; }
+    .header-title { text-align: right; }
     h2 { font-size: 14pt; color: #005FA3; border-bottom: 1px solid #e5e5ea; padding-bottom: 4px; margin-top: 22px; }
     h3 { font-size: 12pt; color: #005FA3; margin-top: 18px; }
     h4 { font-size: 11pt; margin-top: 14px; margin-bottom: 4px; }
@@ -85,8 +115,17 @@ function pdp_agreement_html(array $contract, array $option, ?string $pathwaysHtm
 <body>
 
 <div class="header">
-    <h1>LiveWright Personal Development Plan</h1>
-    <div style="color:#6e6e73; font-size: 10pt;">Signed Agreement</div>
+    <table class="header-table">
+        <tr>
+            <td class="header-logo">
+                <img src="https://livewright.com/wp-content/uploads/2023/12/LiveWright-logo%E2%80%934C-padded.png" alt="LiveWright">
+            </td>
+            <td class="header-title">
+                <h1 style="margin: 0;">Personal Development Plan</h1>
+                <div style="color:#6e6e73; font-size: 10pt; margin-top: 4px;">Signed Agreement</div>
+            </td>
+        </tr>
+    </table>
 </div>
 
 <table class="meta-table">
@@ -102,10 +141,12 @@ function pdp_agreement_html(array $contract, array $option, ?string $pathwaysHtm
         <td class="label">Date Signed</td>
         <td><?= htmlspecialchars($signedDisplay) ?></td>
     </tr>
+    <?php if ($programStart !== ''): ?>
     <tr>
-        <td class="label">Agreement ID</td>
-        <td><?= htmlspecialchars($contract['unique_id'] ?? '') ?></td>
+        <td class="label">Program Start</td>
+        <td><?= htmlspecialchars($programStart) ?></td>
     </tr>
+    <?php endif; ?>
 </table>
 
 <h2>Selected Plan</h2>
@@ -119,6 +160,19 @@ function pdp_agreement_html(array $contract, array $option, ?string $pathwaysHtm
     <div style="margin-top:6px;"><?= $optionDescription /* HTML allowed by admin */ ?></div>
     <div class="price" style="margin-top:10px;">$<?= $price ?> <span style="font-size:11pt; color:#3a3a3c; font-weight:500;">/ <?= htmlspecialchars($type) ?></span></div>
 </div>
+
+<table class="meta-table">
+    <tr>
+        <td class="label"><?= htmlspecialchars($initialLabel) ?></td>
+        <td><strong>$<?= number_format($initialPaymentRaw, 2) ?></strong></td>
+    </tr>
+    <?php if ($remainingFirstRaw > 0): ?>
+    <tr>
+        <td class="label">First recurring payment</td>
+        <td>$<?= number_format($remainingFirstRaw, 2) ?> <span style="color:#6e6e73;">/ <?= htmlspecialchars($type) ?></span></td>
+    </tr>
+    <?php endif; ?>
+</table>
 
 <?php if (!empty($contract['pdp_from']) || !empty($contract['pdp_toward'])): ?>
 <h2>Personal Development Path</h2>
@@ -183,7 +237,8 @@ function pdp_generate_agreement_pdf(PDO $pdo, array $contract, array $option) {
 
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
-        $options->set('isRemoteEnabled', false);
+        // Remote enabled so the LiveWright logo URL renders in the PDF.
+        $options->set('isRemoteEnabled', true);
         $options->set('defaultFont', 'DejaVu Sans');
 
         $dompdf = new Dompdf($options);

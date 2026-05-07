@@ -44,6 +44,19 @@ if ($_POST) {
     $first_name = trim($_POST['first_name'] ?? '');
     $last_name = trim($_POST['last_name'] ?? '');
     $email = trim($_POST['email'] ?? '');
+
+    // Program start date — either chosen from the dropdown or via the "other" calendar.
+    $program_start_choice = trim($_POST['program_start_choice'] ?? '');
+    $program_start_other  = trim($_POST['program_start_other'] ?? '');
+    $program_start_date = null;
+    if ($program_start_choice === 'other') {
+        if ($program_start_other !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $program_start_other)) {
+            $program_start_date = $program_start_other;
+        }
+    } elseif ($program_start_choice !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $program_start_choice)) {
+        $program_start_date = $program_start_choice;
+    }
+
     $contract_description = trim($_POST['contract_description'] ?? '');
     $greeting = trim($_POST['greeting'] ?? '');
     $pdp_from = trim($_POST['pdp_from'] ?? '');
@@ -109,8 +122,8 @@ if ($_POST) {
             
             if ($contract_id) {
                 // Update contract
-                $stmt = $pdo->prepare("UPDATE contracts SET first_name = ?, last_name = ?, email = ?, greeting = ?, contract_description = ?, pdp_from = ?, pdp_toward = ?, pathways = ?, option_1_minimum_months = ?, option_2_minimum_months = ?, option_3_minimum_months = ? WHERE id = ?");
-                $stmt->execute([$first_name, $last_name, $email, $greeting, $contract_description, $pdp_from, $pdp_toward, $pathways, $option_1_minimum, $option_2_minimum, $option_3_minimum, $contract_id]);
+                $stmt = $pdo->prepare("UPDATE contracts SET first_name = ?, last_name = ?, email = ?, greeting = ?, contract_description = ?, pdp_from = ?, pdp_toward = ?, pathways = ?, program_start_date = ?, option_1_minimum_months = ?, option_2_minimum_months = ?, option_3_minimum_months = ? WHERE id = ?");
+                $stmt->execute([$first_name, $last_name, $email, $greeting, $contract_description, $pdp_from, $pdp_toward, $pathways, $program_start_date, $option_1_minimum, $option_2_minimum, $option_3_minimum, $contract_id]);
                 
                 // Soft delete existing options
                 $stmt = $pdo->prepare("UPDATE pricing_options SET deleted_at = NOW() WHERE contract_id = ?");
@@ -118,8 +131,8 @@ if ($_POST) {
             } else {
                 // Insert new contract with unique ID
                 $unique_id = uniqid('', true);
-                $stmt = $pdo->prepare("INSERT INTO contracts (unique_id, first_name, last_name, email, greeting, contract_description, pdp_from, pdp_toward, pathways, option_1_minimum_months, option_2_minimum_months, option_3_minimum_months) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$unique_id, $first_name, $last_name, $email, $greeting, $contract_description, $pdp_from, $pdp_toward, $pathways, $option_1_minimum, $option_2_minimum, $option_3_minimum]);
+                $stmt = $pdo->prepare("INSERT INTO contracts (unique_id, first_name, last_name, email, greeting, contract_description, pdp_from, pdp_toward, pathways, program_start_date, option_1_minimum_months, option_2_minimum_months, option_3_minimum_months) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$unique_id, $first_name, $last_name, $email, $greeting, $contract_description, $pdp_from, $pdp_toward, $pathways, $program_start_date, $option_1_minimum, $option_2_minimum, $option_3_minimum]);
                 $contract_id = $pdo->lastInsertId();
             }
             
@@ -222,6 +235,16 @@ if ($_POST) {
     }
 }
 
+// Load configurable program-start-date options
+$start_date_options = [];
+try {
+    $sd_stmt = $pdo->query("SELECT id, start_date, label FROM program_start_date_options WHERE deleted_at IS NULL ORDER BY sort_order, start_date");
+    $start_date_options = $sd_stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Migration 015 not yet applied; keep dropdown empty (Other still works).
+    $start_date_options = [];
+}
+
 // Prepare form data
 $form_data = [
     'first_name' => $_POST['first_name'] ?? ($contract['first_name'] ?? ($preset_data['first_name'] ?? '')),
@@ -234,8 +257,21 @@ $form_data = [
     'pathways' => $_POST['pathways'] ?? ($contract['pathways'] ?? ($preset_data['pathways'] ?? pdp_default_pathways_html())),
     'option_1_minimum_months' => $_POST['option_1_minimum_months'] ?? ($contract['option_1_minimum_months'] ?? ($preset_data['option_1_minimum_months'] ?? 1)),
     'option_2_minimum_months' => $_POST['option_2_minimum_months'] ?? ($contract['option_2_minimum_months'] ?? ($preset_data['option_2_minimum_months'] ?? 1)),
-    'option_3_minimum_months' => $_POST['option_3_minimum_months'] ?? ($contract['option_3_minimum_months'] ?? ($preset_data['option_3_minimum_months'] ?? 1))
+    'option_3_minimum_months' => $_POST['option_3_minimum_months'] ?? ($contract['option_3_minimum_months'] ?? ($preset_data['option_3_minimum_months'] ?? 1)),
+    'program_start_date' => $_POST['program_start_choice'] ?? ($contract['program_start_date'] ?? ''),
+    'program_start_other' => $_POST['program_start_other'] ?? '',
 ];
+
+// Determine if the saved start date matches a dropdown option or is custom
+$saved_start_date = $contract['program_start_date'] ?? '';
+$start_date_in_list = false;
+foreach ($start_date_options as $opt) {
+    if ($opt['start_date'] === $saved_start_date) { $start_date_in_list = true; break; }
+}
+$selected_start_choice = $_POST['program_start_choice']
+    ?? ($saved_start_date && $start_date_in_list ? $saved_start_date : ($saved_start_date ? 'other' : ''));
+$selected_start_other  = $_POST['program_start_other']
+    ?? ($saved_start_date && !$start_date_in_list ? $saved_start_date : '');
 
 // Prepare options data for form
 $form_options = [];
@@ -355,6 +391,33 @@ require_once 'includes/header.php';
         <div class="form-group">
             <label>Email:</label>
             <input type="email" name="email" value="<?= htmlspecialchars($form_data['email']) ?>" required>
+        </div>
+
+        <div class="form-group">
+            <label>Program Start Date:
+                <small style="color:#666;font-weight:normal;">
+                    (<a href="coaching-rates.php#program-start-dates" target="_blank">manage options</a>)
+                </small>
+            </label>
+            <select name="program_start_choice" id="program_start_choice" onchange="togglePsdOther()">
+                <option value="">— Not set —</option>
+                <?php foreach ($start_date_options as $opt):
+                    $val = $opt['start_date'];
+                    $label = !empty($opt['label'])
+                        ? $opt['label'] . ' (' . date('M j, Y', strtotime($val)) . ')'
+                        : date('F j, Y', strtotime($val));
+                ?>
+                    <option value="<?= htmlspecialchars($val) ?>" <?= $selected_start_choice === $val ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($label) ?>
+                    </option>
+                <?php endforeach; ?>
+                <option value="other" <?= $selected_start_choice === 'other' ? 'selected' : '' ?>>Other (pick a date)</option>
+            </select>
+            <input type="date"
+                   name="program_start_other"
+                   id="program_start_other"
+                   value="<?= htmlspecialchars($selected_start_other) ?>"
+                   style="margin-top: 8px; <?= $selected_start_choice === 'other' ? '' : 'display:none;' ?>">
         </div>
 
         <div class="description-group">
@@ -1099,6 +1162,19 @@ require_once 'includes/header.php';
         const hasPackages = container.querySelectorAll('.support-package-item, .package-with-savings').length > 0;
         if (!hasPackages) {
             container.innerHTML = '<div class="no-packages-message">No support packages added yet. Use the Package Builder above or add manually below.</div>';
+        }
+    }
+
+    // Show/hide the "Other" date picker based on the dropdown selection.
+    function togglePsdOther() {
+        const sel = document.getElementById('program_start_choice');
+        const other = document.getElementById('program_start_other');
+        if (!sel || !other) return;
+        if (sel.value === 'other') {
+            other.style.display = '';
+            other.focus();
+        } else {
+            other.style.display = 'none';
         }
     }
 

@@ -247,11 +247,18 @@ function pdp_invoice_html(array $contract, array $option, array $payment) {
     </tr>
 </table>
 
-<?php if ($isDeposit && $fullPlanPrice): ?>
+<?php if ($isDeposit && $fullPlanPrice):
+    $remainderUrl = 'https://checkout.livewright.com/personal-development-plan/?uid=' . urlencode($contract['unique_id'] ?? '');
+?>
 <div class="deposit-callout">
     <strong>Note:</strong> This is a deposit toward your selected plan
     ($<?= number_format($fullPlanPrice, 2) ?> / <?= htmlspecialchars($planType) ?>).
     Your remaining balance will be charged on the agreed schedule.
+    <div style="margin-top: 10px;">
+        <a href="<?= htmlspecialchars($remainderUrl) ?>" style="display:inline-block;background:#005FA3;color:#fff;text-decoration:none;padding:8px 16px;border-radius:6px;font-weight:600;">
+            Pay Remaining Balance
+        </a>
+    </div>
 </div>
 <?php endif; ?>
 

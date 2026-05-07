@@ -53,6 +53,31 @@ if ($_POST) {
             $stmt->execute([$id]);
             $success = 'Rate deleted successfully';
         }
+    } elseif ($action === 'add_start_date') {
+        $start_date = trim($_POST['start_date'] ?? '');
+        $label = trim($_POST['start_date_label'] ?? '');
+        $sort_order = (int)($_POST['sort_order'] ?? 0);
+
+        if (empty($start_date) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $start_date)) {
+            $errors[] = 'Valid start date is required (YYYY-MM-DD)';
+        }
+        if (empty($errors)) {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO program_start_date_options (start_date, label, sort_order) VALUES (?, ?, ?)
+                    ON DUPLICATE KEY UPDATE label = VALUES(label), sort_order = VALUES(sort_order), deleted_at = NULL");
+                $stmt->execute([$start_date, $label !== '' ? $label : null, $sort_order]);
+                $success = 'Program start date saved';
+            } catch (PDOException $e) {
+                $errors[] = 'Error saving start date: ' . $e->getMessage();
+            }
+        }
+    } elseif ($action === 'delete_start_date') {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0) {
+            $stmt = $pdo->prepare("UPDATE program_start_date_options SET deleted_at = NOW() WHERE id = ?");
+            $stmt->execute([$id]);
+            $success = 'Program start date removed';
+        }
     } elseif ($action === 'add_coach') {
         $coach_name = trim($_POST['new_coach_name'] ?? '');
 
@@ -100,6 +125,16 @@ foreach ($all_rates as $rate) {
 
 $coach_names = array_keys($coaches);
 
+// Program start dates (settings managed here)
+$start_dates = [];
+try {
+    $stmt = $pdo->query("SELECT * FROM program_start_date_options WHERE deleted_at IS NULL ORDER BY sort_order, start_date");
+    $start_dates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Table may not exist yet (migration 015 not run); silently skip.
+    $start_dates = [];
+}
+
 $page_title = 'Coaching Rates';
 require_once 'includes/header.php';
 ?>
@@ -122,6 +157,62 @@ require_once 'includes/header.php';
                 </ul>
             </div>
         <?php endif; ?>
+
+        <!-- Program Start Dates -->
+        <div class="add-coach-form" style="margin-bottom: 24px;">
+            <h3>Program Start Dates</h3>
+            <p style="color: #6e6e73; font-size: 13px; margin-top: 4px;">These appear as the dropdown options on the PDP edit form. Admins can also pick "Other" + a custom date when editing a plan.</p>
+
+            <form method="POST" class="form-row" style="align-items: end;">
+                <input type="hidden" name="action" value="add_start_date">
+                <div class="form-group">
+                    <label>Date:</label>
+                    <input type="date" name="start_date" required>
+                </div>
+                <div class="form-group">
+                    <label>Label (optional):</label>
+                    <input type="text" name="start_date_label" placeholder="e.g., Spring 2026 Cohort">
+                </div>
+                <div class="form-group">
+                    <label>Sort:</label>
+                    <input type="number" name="sort_order" value="0" style="width: 80px;">
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">Add / Update Date</button>
+                </div>
+            </form>
+
+            <?php if (!empty($start_dates)): ?>
+                <table class="rates-table" style="margin-top: 14px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 140px;">Date</th>
+                            <th>Label</th>
+                            <th style="width: 80px;">Sort</th>
+                            <th style="width: 80px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($start_dates as $sd): ?>
+                            <tr>
+                                <td><?= htmlspecialchars(date('M j, Y', strtotime($sd['start_date']))) ?></td>
+                                <td><?= htmlspecialchars($sd['label'] ?? '') ?></td>
+                                <td><?= (int)$sd['sort_order'] ?></td>
+                                <td>
+                                    <form method="POST" onsubmit="return confirm('Remove this start date option?');" style="display:inline;">
+                                        <input type="hidden" name="action" value="delete_start_date">
+                                        <input type="hidden" name="id" value="<?= (int)$sd['id'] ?>">
+                                        <button type="submit" class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p style="color: #999; font-style: italic; margin-top: 12px;">No start dates configured yet.</p>
+            <?php endif; ?>
+        </div>
 
         <!-- Add New Coach Form -->
         <div class="add-coach-form">

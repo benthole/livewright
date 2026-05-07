@@ -55,7 +55,17 @@ $stmt = $pdo->prepare("
            po.option_number AS selected_option_number,
            po.sub_option_name AS selected_sub_option_name,
            po.type AS selected_type,
-           po.price AS selected_price
+           po.price AS selected_price,
+           (
+               SELECT COALESCE(SUM(p.amount), 0)
+               FROM payments p
+               WHERE p.contract_id = c.id AND p.status = 'succeeded'
+           ) AS total_paid,
+           (
+               SELECT MIN(p.created_at)
+               FROM payments p
+               WHERE p.contract_id = c.id AND p.status = 'succeeded'
+           ) AS first_payment_at
     FROM contracts c
     LEFT JOIN pricing_options po ON po.id = c.selected_option_id
     WHERE $where
@@ -119,6 +129,7 @@ $tabs = [
                     <th><?= $sortLink('modified', 'Date Modified') ?></th>
                     <th><?= $sortLink('status', 'Status') ?></th>
                     <th>Selected Plan</th>
+                    <th>Initial Paid</th>
                     <th>Link</th>
                     <th>Actions</th>
                 </tr>
@@ -126,7 +137,7 @@ $tabs = [
             <tbody>
                 <?php if (empty($contracts)): ?>
                     <tr>
-                        <td colspan="9" style="text-align: center; color: var(--ink-500); padding: 32px 0;">
+                        <td colspan="10" style="text-align: center; color: var(--ink-500); padding: 32px 0;">
                             <?php
                             switch ($status) {
                                 case 'signed':  echo 'No signed plans yet.'; break;
@@ -166,6 +177,20 @@ $tabs = [
                                         / <?= htmlspecialchars($contract['selected_type']) ?>
                                     </div>
                                 </div>
+                            <?php else: ?>
+                                <span class="unsigned">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ((float)$contract['total_paid'] > 0): ?>
+                                <div style="font-weight:600; color: #248a3d;">
+                                    $<?= number_format((float)$contract['total_paid'], 2) ?>
+                                </div>
+                                <?php if (!empty($contract['first_payment_at'])): ?>
+                                    <div style="font-size: 0.8em; color: var(--ink-500); margin-top: 2px;">
+                                        <?= date('M j, Y', strtotime($contract['first_payment_at'])) ?>
+                                    </div>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <span class="unsigned">—</span>
                             <?php endif; ?>

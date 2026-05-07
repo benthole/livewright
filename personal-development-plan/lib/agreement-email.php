@@ -73,6 +73,7 @@ function pdp_build_agreement_email_bodies(array $contract, array $option, string
         . '<p><a href="' . htmlspecialchars($downloadUrl) . '" style="display:inline-block;background:#005FA3;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;">Download Your Agreement (PDF)</a></p>'
         . '<p style="font-size:12px;color:#6e6e73;">If the button doesn\'t work, copy this link into your browser:<br>'
         . htmlspecialchars($downloadUrl) . '</p>'
+        . '<p style="font-size:13px;color:#3a3a3c;">You\'ll also receive a separate email with your invoice/receipt for the payment we just processed.</p>'
         . '<p>If you have any questions, just reply to this email.</p>'
         . '<p>— The LiveWright Team</p>'
         . '</body></html>';
@@ -84,6 +85,7 @@ function pdp_build_agreement_email_bodies(array $contract, array $option, string
         . "Signed: {$signedDisplay}\n\n"
         . "A signed copy of your agreement — including the Terms of Service and Operating Agreements you accepted — is available here:\n"
         . $downloadUrl . "\n\n"
+        . "You'll also receive a separate email with your invoice/receipt for the payment we just processed.\n\n"
         . "If you have any questions, just reply to this email.\n\n"
         . "— The LiveWright Team\n";
 

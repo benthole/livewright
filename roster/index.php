@@ -1297,11 +1297,12 @@ function getCustomFieldById($customFields, $fieldId) {
     </div>
 
     <!-- Dropped contacts toggle -->
-    <div style="text-align: center; margin-top: 20px;">
+    <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
         <?php if ($viewDropped): ?>
         <a href="./" style="display: inline-block; padding: 10px 20px; background: #34495e; color: white; border-radius: 4px; font-size: 14px; font-weight: 600; text-decoration: none;">&larr; Back to Roster</a>
         <?php else: ?>
         <a href="./?dropped=1" style="display: inline-block; padding: 10px 20px; background: #7f8c8d; color: white; border-radius: 4px; font-size: 14px; font-weight: 600; text-decoration: none;">View Dropped</a>
+        <a href="scheduled_drops.php" style="display: inline-block; padding: 10px 20px; background: #95a5a6; color: white; border-radius: 4px; font-size: 14px; font-weight: 600; text-decoration: none;">Scheduled Drops</a>
         <?php endif; ?>
     </div>
 
@@ -1361,6 +1362,44 @@ function getCustomFieldById($customFields, $fieldId) {
             <div class="modal-footer">
                 <button class="btn-secondary" id="cancelCohortModal">Cancel</button>
                 <button class="btn-primary" id="saveCohortChange">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drop Confirmation Modal -->
+    <div class="modal-overlay" id="dropConfirmModal">
+        <div class="modal" style="max-width: 520px;">
+            <div class="modal-header">
+                <h2 style="color: #c0392b;">Confirm Drop</h2>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 12px;">You are about to drop <strong id="dropConfirmCount">0</strong> contact(s).</p>
+
+                <div style="background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; margin-bottom: 14px;">
+                    <label style="font-weight: 600; font-size: 13px; color: #334155; display: block; margin-bottom: 8px;">When should this drop take effect?</label>
+                    <label style="display: block; margin-bottom: 6px; font-size: 14px;">
+                        <input type="radio" name="dropTiming" value="now" checked> Drop immediately
+                    </label>
+                    <label style="display: block; font-size: 14px;">
+                        <input type="radio" name="dropTiming" value="scheduled"> Schedule for a future date
+                    </label>
+                    <input type="date" id="dropScheduledFor" min="" style="margin-top: 8px; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; display: none;">
+                    <p id="dropScheduleHelp" style="font-size: 12px; color: #94a3b8; margin: 8px 0 0; display: none;">A daily processor will run the drop on the chosen date. The contact stays active until then.</p>
+                </div>
+
+                <p style="margin-bottom: 12px;">When the drop runs, it will:</p>
+                <ul style="margin: 0 0 16px 20px; color: #555; font-size: 14px; line-height: 1.6;">
+                    <li>Change their team to <code>-dropped</code></li>
+                    <li>Apply the Dropped tag in Keap</li>
+                    <li>Unassign their individual coach and group coach</li>
+                    <li>Archive their previous team, coaches, payment info, and coaching files as a Keap Note</li>
+                    <li>Email Sebastian, Maja, and Elizabeth (to stop auto payments and future manual triggers)</li>
+                </ul>
+                <p style="color: #c0392b; font-weight: 600; font-size: 14px;">Are you sure they are dropping?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelDropConfirm">Cancel</button>
+                <button class="btn-primary" id="confirmDropBtn" style="background: #c0392b; border-color: #c0392b;">Yes, Drop Contact(s)</button>
             </div>
         </div>
     </div>
@@ -2388,6 +2427,124 @@ function getCustomFieldById($customFields, $fieldId) {
             }
         });
 
+        // Drop confirmation modal elements
+        const dropConfirmModal = document.getElementById('dropConfirmModal');
+        const dropConfirmCount = document.getElementById('dropConfirmCount');
+        const cancelDropConfirm = document.getElementById('cancelDropConfirm');
+        const confirmDropBtn = document.getElementById('confirmDropBtn');
+
+        cancelDropConfirm.addEventListener('click', function() {
+            dropConfirmModal.classList.remove('show');
+        });
+        dropConfirmModal.addEventListener('click', function(e) {
+            if (e.target === dropConfirmModal) dropConfirmModal.classList.remove('show');
+        });
+
+        // Wire up the schedule-vs-immediate toggle in the drop modal.
+        const dropScheduledFor = document.getElementById('dropScheduledFor');
+        const dropScheduleHelp = document.getElementById('dropScheduleHelp');
+        const dropTimingRadios = document.querySelectorAll('input[name="dropTiming"]');
+        const todayIso = new Date().toISOString().slice(0, 10);
+        if (dropScheduledFor) dropScheduledFor.min = todayIso;
+        dropTimingRadios.forEach(r => {
+            r.addEventListener('change', () => {
+                const scheduled = document.querySelector('input[name="dropTiming"]:checked').value === 'scheduled';
+                dropScheduledFor.style.display = scheduled ? '' : 'none';
+                dropScheduleHelp.style.display = scheduled ? '' : 'none';
+                confirmDropBtn.textContent = scheduled ? 'Schedule Drop' : 'Yes, Drop Contact(s)';
+            });
+        });
+
+        // Run the drop workflow for the currently selected contacts.
+        async function runDropWorkflow() {
+            const contactIds = Array.from(selectedContacts);
+            const isScheduled = document.querySelector('input[name="dropTiming"]:checked').value === 'scheduled';
+            const scheduledFor = isScheduled ? (dropScheduledFor.value || '') : '';
+
+            if (isScheduled && !scheduledFor) {
+                alert('Please pick a date for the scheduled drop.');
+                return;
+            }
+
+            confirmDropBtn.disabled = true;
+            confirmDropBtn.textContent = isScheduled ? 'Scheduling...' : 'Dropping...';
+            saveCohortChange.disabled = true;
+            saveCohortChange.textContent = isScheduled ? 'Scheduling...' : 'Dropping...';
+
+            try {
+                const payload = { contact_ids: contactIds };
+                if (scheduledFor) payload.scheduled_for = scheduledFor;
+                const response = await fetch('drop_contact.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.success && result.mode === 'scheduled') {
+                    let msg = `Scheduled ${result.total_scheduled} drop(s) for ${result.scheduled_for}.`;
+                    if (result.skipped && result.skipped.length) {
+                        msg += `\n${result.skipped.length} skipped (not in local roster).`;
+                    }
+                    msg += '\nView/manage at scheduled_drops.php';
+                    alert(msg);
+                    dropConfirmModal.classList.remove('show');
+                    changeCohortModal.classList.remove('show');
+                    rowCheckboxes.forEach(cb => cb.checked = false);
+                    selectAllCheckbox.checked = false;
+                    selectedContacts.clear();
+                    updateBulkActions();
+                    return;
+                }
+
+                if (result.success) {
+                    // Update UI rows for dropped contacts
+                    (result.dropped || []).forEach(d => {
+                        const row = document.querySelector(`tr[data-contact-id="${d.id}"]`);
+                        if (row) {
+                            row.setAttribute('data-cohort', '-dropped');
+                            const cells = row.querySelectorAll('td');
+                            if (cells[5]) cells[5].textContent = '-dropped';
+                        }
+                    });
+
+                    let msg = `Dropped ${result.total_dropped} contact(s).`;
+                    if (result.total_failed > 0) msg += `\n${result.total_failed} failed.`;
+                    if (result.notification) {
+                        if (result.notification.sent) {
+                            msg += `\nNotification email sent to: ${(result.notification.recipients || []).join(', ')}.`;
+                        } else if (result.notification.error) {
+                            msg += `\nNotification email NOT sent: ${result.notification.error}`;
+                        }
+                        if (result.notification.unresolved_emails && result.notification.unresolved_emails.length) {
+                            msg += `\nCould not find Keap contacts for: ${result.notification.unresolved_emails.join(', ')}`;
+                        }
+                    }
+                    alert(msg);
+
+                    dropConfirmModal.classList.remove('show');
+                    changeCohortModal.classList.remove('show');
+                    rowCheckboxes.forEach(cb => cb.checked = false);
+                    selectAllCheckbox.checked = false;
+                    selectedContacts.clear();
+                    updateBulkActions();
+                    buildCohortFilter();
+                } else {
+                    alert('Error: ' + (result.error || 'Unknown error occurred'));
+                }
+            } catch (error) {
+                console.error('Error dropping contact(s):', error);
+                alert('An error occurred while dropping contact(s). Please try again.');
+            } finally {
+                confirmDropBtn.disabled = false;
+                confirmDropBtn.textContent = 'Yes, Drop Contact(s)';
+                saveCohortChange.disabled = false;
+                saveCohortChange.textContent = 'Save Changes';
+            }
+        }
+
+        confirmDropBtn.addEventListener('click', runDropWorkflow);
+
         // Save cohort change
         saveCohortChange.addEventListener('click', async function() {
             const newCohort = cohortSelect.value;
@@ -2398,6 +2555,13 @@ function getCustomFieldById($customFields, $fieldId) {
             }
 
             const contactIds = Array.from(selectedContacts);
+
+            // Dropping has its own workflow: confirm first, then run drop_contact.php
+            if (newCohort === '-dropped') {
+                dropConfirmCount.textContent = contactIds.length;
+                dropConfirmModal.classList.add('show');
+                return;
+            }
 
             // Disable button and show loading state
             saveCohortChange.disabled = true;
