@@ -201,7 +201,7 @@ function pdp_agreement_html(array $contract, array $option, ?string $pathwaysHtm
 <div class="terms"><?= $terms ?></div>
 
 <div class="footer-sig">
-    <p><strong><?= htmlspecialchars($clientName) ?></strong> agreed to the Terms of Service and Operating Agreements above and signed this Personal Development Plan on <?= htmlspecialchars($signedDisplay) ?>.</p>
+    <p><strong><?= htmlspecialchars($clientName) ?></strong> signed this Personal Development Plan on <?= htmlspecialchars($signedDisplay) ?>.</p>
     <p>This agreement was signed electronically. A copy is retained by LiveWright, LLC.</p>
 </div>
 
