@@ -64,6 +64,7 @@ foreach ($options as $option_number => $sub_options) {
                 'id' => (int)$tier['id'],
                 'price' => (float)$tier['price'],
                 'type' => $tier['type'],
+                'deposit' => isset($tier['deposit_amount']) ? (float)$tier['deposit_amount'] : 0,
             ];
         };
 
@@ -556,10 +557,25 @@ $cards_js = array_map(function($c) {
                     savingsHtml = '<div class="tier-savings">Best value</div>';
                 }
 
+                // Deposit only applies to Monthly. When configured, the client
+                // pays the deposit up front and then the monthly subscription
+                // kicks in.
+                var depositHtml = '';
+                if (type === 'Monthly' && tier.deposit && tier.deposit > 0) {
+                    depositHtml =
+                        '<div class="tier-deposit" style="margin-top:6px;padding:6px 8px;background:#e6f3ff;border-radius:4px;color:#005FA3;font-weight:600;font-size:0.9em;">' +
+                          'Initial payment due today: $' + formatMoney(tier.deposit) +
+                        '</div>' +
+                        '<div class="tier-detail" style="margin-top:4px;">' +
+                          'then $' + formatMoney(tier.price) + '/mo for the next 12 months' +
+                        '</div>';
+                }
+
                 el.innerHTML =
                     '<div class="tier-label">' + meta.title + '</div>' +
                     '<div class="tier-price">$' + formatMoney(tier.price) + '<span style="font-size:0.7em;color:#666;font-weight:600;">/' + meta.perPeriod + '</span></div>' +
                     '<div class="tier-detail">' + meta.detail + '</div>' +
+                    depositHtml +
                     savingsHtml;
 
                 el.addEventListener('click', function () { selectBillingTier(el, tier); });
