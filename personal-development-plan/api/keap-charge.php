@@ -109,13 +109,13 @@ try {
     // Build order title and items
     $orderTitle = 'PDP: ' . ($plan_description ?: $option['description']);
     if ($is_deposit) {
-        $orderTitle .= ' ($100 Deposit)';
+        $orderTitle .= ' (Initial Payment $' . number_format($amount, 2) . ')';
     }
 
     $orderItems = [
         [
             'description' => $is_deposit
-                ? "Deposit for: {$option['description']} ({$option['sub_option_name']} - {$option['type']})"
+                ? "Initial payment for: {$option['description']} ({$option['sub_option_name']} - {$option['type']})"
                 : "{$option['description']} ({$option['sub_option_name']} - {$option['type']})",
             'price' => $amount,
             'quantity' => 1,
@@ -137,7 +137,7 @@ try {
 
     // Process payment via Keap
     $paymentNotes = $is_deposit
-        ? "PDP $100 deposit. Selected plan: {$option['description']} ({$option['sub_option_name']} - {$option['type']}) at \${$option['price']}/{$option['type']}"
+        ? "PDP initial payment of \${$amount}. Plan: {$option['description']} ({$option['sub_option_name']} - {$option['type']}) at \${$option['price']}/{$option['type']}. Remaining recurring charges handled separately."
         : "PDP payment in full: {$option['description']} ({$option['sub_option_name']} - {$option['type']})";
 
     $chargeResult = pdp_keap_process_payment($orderId, $payment_method_id, $amount, $paymentNotes);

@@ -51,6 +51,16 @@ $type_labels = [
     'Quarterly' => 'quarterly over the next 12 months',
 ];
 $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
+
+// Deposit rule: only Monthly charges a deposit. The deposit replaces the
+// "first monthly payment" — client pays the deposit today, then the monthly
+// subscription handles the remaining 12 payments.
+$plan_deposit = (float)($selected_option['deposit_amount'] ?? 0);
+$has_monthly_deposit = ($plan_type === 'Monthly' && $plan_deposit > 0);
+
+// Amount charged today + label shown on the pay button / "Due today" row.
+$initial_amount = $has_monthly_deposit ? $plan_deposit : $plan_price;
+$initial_label  = $has_monthly_deposit ? 'Initial payment' : ($plan_type === 'Yearly' ? 'Pay in Full' : 'First payment');
 ?>
 <!DOCTYPE html>
 <html>
@@ -196,12 +206,18 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
 
                     <div class="payment-summary" id="paymentSummary">
                         <div class="line-item">
-                            <span class="label" id="summaryLabel">Pay in Full</span>
-                            <span class="amount" id="summaryAmount">$<?= number_format($plan_price, 2) ?></span>
+                            <span class="label" id="summaryLabel"><?= htmlspecialchars($initial_label) ?></span>
+                            <span class="amount" id="summaryAmount">$<?= number_format($initial_amount, 2) ?></span>
                         </div>
+                        <?php if ($has_monthly_deposit): ?>
+                            <div class="line-item recurring">
+                                <span class="label">Then $<?= number_format($plan_price, 2) ?>/month for 12 months</span>
+                                <span class="amount">starting next billing cycle</span>
+                            </div>
+                        <?php endif; ?>
                         <div class="line-item total">
                             <span class="label">Due Today</span>
-                            <span class="amount" id="summaryTotal">$<?= number_format($plan_price, 2) ?></span>
+                            <span class="amount" id="summaryTotal">$<?= number_format($initial_amount, 2) ?></span>
                         </div>
                     </div>
 
@@ -215,7 +231,7 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
                     <div id="payment-errors" role="alert"></div>
 
                     <button type="button" class="pay-btn" id="payBtn" disabled onclick="handlePayment()">
-                        <span class="btn-text" id="payBtnText">Pay $<?= number_format($plan_price, 2) ?> & Sign Plan</span>
+                        <span class="btn-text" id="payBtnText">Pay $<?= number_format($initial_amount, 2) ?> & Sign Plan</span>
                         <span class="spinner"></span>
                     </button>
 
@@ -271,6 +287,8 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
         lastName: '<?= addslashes($last_name) ?>',
         email: '<?= addslashes($email) ?>',
         planPrice: <?= $plan_price ?>,
+        initialAmount: <?= $initial_amount ?>,
+        isMonthlyDeposit: <?= $has_monthly_deposit ? 'true' : 'false' ?>,
         planDescription: '<?= addslashes($selected_option['description'] ?? '') ?>'
     };
 
@@ -280,7 +298,9 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
     let processing = false;
 
     function getChargeAmount() {
-        return CONFIG.planPrice;
+        // For Monthly plans with a deposit, the upfront charge is the deposit
+        // (not the monthly price). For everything else it's the plan price.
+        return CONFIG.initialAmount;
     }
 
     // --- Keap Payment Integration ---
@@ -389,7 +409,7 @@ $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
                     contact_id: keapContactId,
                     payment_method_id: paymentMethodId,
                     amount: getChargeAmount(),
-                    is_deposit: false,
+                    is_deposit: CONFIG.isMonthlyDeposit,
                     plan_description: CONFIG.planDescription
                 })
             });
