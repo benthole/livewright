@@ -3,7 +3,7 @@ require_once '../config.php';
 requireLogin();
 
 // ---- Tab filter ----
-$validStatuses = ['all', 'pending', 'signed'];
+$validStatuses = ['all', 'pending', 'signed', 'archived'];
 $status = $_GET['status'] ?? 'all';
 if (!in_array($status, $validStatuses, true)) {
     $status = 'all';
@@ -26,12 +26,15 @@ $dir = (strtolower($_GET['dir'] ?? 'desc') === 'asc') ? 'ASC' : 'DESC';
 $orderExpr = $sortMap[$sort] . ' ' . $dir . ', c.id DESC';
 
 // ---- Counts (drive tab badges) ----
-$counts = ['all' => 0, 'pending' => 0, 'signed' => 0];
+// "all/pending/signed" tabs exclude archived rows; the Archived tab shows
+// exactly those rows (and still excludes soft-deleted trash).
+$counts = ['all' => 0, 'pending' => 0, 'signed' => 0, 'archived' => 0];
 $countStmt = $pdo->query("
     SELECT
-        COUNT(*) AS total,
-        SUM(CASE WHEN signed = 1 THEN 1 ELSE 0 END) AS signed_count,
-        SUM(CASE WHEN signed = 0 OR signed IS NULL THEN 1 ELSE 0 END) AS pending_count
+        SUM(CASE WHEN archived_at IS NULL THEN 1 ELSE 0 END) AS total,
+        SUM(CASE WHEN archived_at IS NULL AND signed = 1 THEN 1 ELSE 0 END) AS signed_count,
+        SUM(CASE WHEN archived_at IS NULL AND (signed = 0 OR signed IS NULL) THEN 1 ELSE 0 END) AS pending_count,
+        SUM(CASE WHEN archived_at IS NOT NULL THEN 1 ELSE 0 END) AS archived_count
     FROM contracts
     WHERE deleted_at IS NULL
 ");
@@ -39,19 +42,26 @@ if ($row = $countStmt->fetch(PDO::FETCH_ASSOC)) {
     $counts['all'] = (int)$row['total'];
     $counts['signed'] = (int)$row['signed_count'];
     $counts['pending'] = (int)$row['pending_count'];
+    $counts['archived'] = (int)$row['archived_count'];
 }
 
 // ---- Contracts query for the active tab ----
 $where = 'c.deleted_at IS NULL';
-if ($status === 'signed') {
-    $where .= ' AND c.signed = 1';
-} elseif ($status === 'pending') {
-    $where .= ' AND (c.signed = 0 OR c.signed IS NULL)';
+if ($status === 'archived') {
+    $where .= ' AND c.archived_at IS NOT NULL';
+} else {
+    $where .= ' AND c.archived_at IS NULL';
+    if ($status === 'signed') {
+        $where .= ' AND c.signed = 1';
+    } elseif ($status === 'pending') {
+        $where .= ' AND (c.signed = 0 OR c.signed IS NULL)';
+    }
 }
 
 $stmt = $pdo->prepare("
     SELECT c.id, c.unique_id, c.first_name, c.last_name, c.email, c.signed, c.created_at, c.updated_at,
            c.selected_option_id, c.agreement_pdf_path, c.agreement_email_sent_at,
+           c.archived_at, c.archive_note,
            po.option_number AS selected_option_number,
            po.sub_option_name AS selected_sub_option_name,
            po.type AS selected_type,
@@ -78,9 +88,10 @@ $page_title = 'Dashboard';
 require_once 'includes/header.php';
 
 $tabs = [
-    'all'     => 'View All',
-    'pending' => 'Pending',
-    'signed'  => 'Signed',
+    'all'      => 'View All',
+    'pending'  => 'Pending',
+    'signed'   => 'Signed',
+    'archived' => 'Archived',
 ];
 ?>
 
@@ -94,6 +105,17 @@ $tabs = [
 
         <?php if (!empty($_GET['deleted'])): ?>
             <div class="alert alert-success">Plan moved to Trash. <a href="trash.php">View Trash</a>.</div>
+        <?php endif; ?>
+        <?php if (!empty($_GET['archived'])): ?>
+            <div class="alert alert-success">
+                Archived <?= (int)$_GET['archived'] ?> plan<?= (int)$_GET['archived'] === 1 ? '' : 's' ?>.
+                <a href="?status=archived">View Archived</a>.
+            </div>
+        <?php endif; ?>
+        <?php if (!empty($_GET['unarchived'])): ?>
+            <div class="alert alert-success">
+                Restored <?= (int)$_GET['unarchived'] ?> plan<?= (int)$_GET['unarchived'] === 1 ? '' : 's' ?> from archive.
+            </div>
         <?php endif; ?>
 
         <nav class="tab-nav" role="tablist" aria-label="Filter plans">
@@ -119,9 +141,23 @@ $tabs = [
                 . htmlspecialchars($label) . $arrow . '</a>';
         };
         ?>
+        <!-- Bulk action bar (hidden until a row is checked) -->
+        <form id="bulkForm" method="POST" action="archive.php" style="margin: 10px 0;">
+            <input type="hidden" name="status" value="<?= htmlspecialchars($status) ?>">
+            <div id="bulkBar" style="display:none; padding: 10px 14px; background: #eaf3fb; border: 1px solid #b6d4ed; border-radius: 6px; align-items: center; gap: 12px;">
+                <span><strong id="bulkCount">0</strong> selected</span>
+                <?php if ($status === 'archived'): ?>
+                    <button type="submit" name="action" value="unarchive" class="btn">Restore selected</button>
+                <?php else: ?>
+                    <button type="button" class="btn" onclick="openArchiveModal()">Archive selected…</button>
+                <?php endif; ?>
+                <button type="button" class="btn btn-secondary" onclick="clearSelection()">Clear</button>
+            </div>
+
         <table>
             <thead>
                 <tr>
+                    <th style="width:30px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
                     <th><?= $sortLink('first_name', 'First Name') ?></th>
                     <th><?= $sortLink('last_name', 'Last Name') ?></th>
                     <th><?= $sortLink('email', 'Email') ?></th>
@@ -137,12 +173,13 @@ $tabs = [
             <tbody>
                 <?php if (empty($contracts)): ?>
                     <tr>
-                        <td colspan="10" style="text-align: center; color: var(--ink-500); padding: 32px 0;">
+                        <td colspan="11" style="text-align: center; color: var(--ink-500); padding: 32px 0;">
                             <?php
                             switch ($status) {
-                                case 'signed':  echo 'No signed plans yet.'; break;
-                                case 'pending': echo 'No pending plans.'; break;
-                                default:        echo 'No plans found.';
+                                case 'signed':   echo 'No signed plans yet.'; break;
+                                case 'pending':  echo 'No pending plans.'; break;
+                                case 'archived': echo 'No archived plans.'; break;
+                                default:         echo 'No plans found.';
                             }
                             ?>
                         </td>
@@ -151,7 +188,24 @@ $tabs = [
 
                 <?php foreach ($contracts as $contract): ?>
                     <tr>
-                        <td><?= htmlspecialchars($contract['first_name']) ?></td>
+                        <td><input type="checkbox" class="row-check" name="ids[]" value="<?= (int)$contract['id'] ?>" form="bulkForm" onchange="updateBulkBar()"></td>
+                        <td>
+                            <?= htmlspecialchars($contract['first_name']) ?>
+                            <?php if (!empty($contract['archived_at'])): ?>
+                                <?php $note = trim((string)($contract['archive_note'] ?? '')); ?>
+                                <div style="font-size: 0.78em; color: var(--ink-500); margin-top: 4px;">
+                                    Archived <?= date('M j, Y', strtotime($contract['archived_at'])) ?>
+                                    <?php if ($note !== ''): ?>
+                                        <span title="<?= htmlspecialchars($note) ?>" style="cursor: help; text-decoration: underline dotted;">· note</span>
+                                    <?php endif; ?>
+                                </div>
+                                <?php if ($note !== ''): ?>
+                                    <div style="font-size: 0.78em; color: var(--ink-500); margin-top: 2px; max-width: 220px; white-space: normal;">
+                                        <em><?= htmlspecialchars($note) ?></em>
+                                    </div>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </td>
                         <td><?= htmlspecialchars($contract['last_name']) ?></td>
                         <td><?= htmlspecialchars($contract['email']) ?></td>
                         <td class="date-cell"><?= date('M j, Y', strtotime($contract['created_at'])) ?></td>
@@ -214,12 +268,37 @@ $tabs = [
                             <?php if (!empty($contract['agreement_pdf_path'])): ?>
                                 <a href="../agreement.php?uid=<?= urlencode($contract['unique_id']) ?>" target="_blank" class="btn">Agreement PDF</a>
                             <?php endif; ?>
+                            <?php if (!empty($contract['archived_at'])): ?>
+                                <button type="button" class="btn" onclick="quickUnarchive(<?= (int)$contract['id'] ?>)">Restore</button>
+                            <?php else: ?>
+                                <button type="button" class="btn" onclick="quickArchive(<?= (int)$contract['id'] ?>)">Archive</button>
+                            <?php endif; ?>
                             <a href="delete.php?id=<?= $contract['id'] ?>" class="btn btn-danger">Delete</a>
                         </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </form>
+    </div>
+
+    <!-- Archive Modal -->
+    <div id="archiveModal" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: #fff; border-radius: 8px; max-width: 480px; width: 90%; padding: 24px;">
+            <h3 style="margin-top: 0;">Archive plan<span id="archiveModalCount"></span>?</h3>
+            <p style="color: var(--ink-500); font-size: 14px;">Archived plans are hidden from the main list. They stay searchable under the Archived tab and can be restored at any time.</p>
+            <form id="archiveModalForm" method="POST" action="archive.php">
+                <input type="hidden" name="action" value="archive">
+                <input type="hidden" name="status" value="<?= htmlspecialchars($status) ?>">
+                <div id="archiveModalIds"></div>
+                <label style="display:block; font-weight:600; margin-bottom: 6px;">Note (optional):</label>
+                <textarea name="archive_note" rows="3" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:4px;" placeholder="e.g., Client decided to delay enrollment; revisit in Q3"></textarea>
+                <div style="margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeArchiveModal()">Cancel</button>
+                    <button type="submit" class="btn">Archive</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -259,6 +338,68 @@ $tabs = [
 
         document.body.removeChild(textArea);
     }
+
+    // ---- Bulk select + archive UI ----
+    function getCheckedIds() {
+        return Array.from(document.querySelectorAll('.row-check:checked')).map(cb => cb.value);
+    }
+    function updateBulkBar() {
+        const ids = getCheckedIds();
+        const bar = document.getElementById('bulkBar');
+        const countEl = document.getElementById('bulkCount');
+        if (ids.length === 0) {
+            bar.style.display = 'none';
+        } else {
+            bar.style.display = 'flex';
+            countEl.textContent = ids.length;
+        }
+    }
+    function toggleSelectAll(cb) {
+        document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+        updateBulkBar();
+    }
+    function clearSelection() {
+        document.querySelectorAll('.row-check').forEach(c => c.checked = false);
+        const sa = document.getElementById('selectAll');
+        if (sa) sa.checked = false;
+        updateBulkBar();
+    }
+    function openArchiveModal() {
+        const ids = getCheckedIds();
+        if (ids.length === 0) return;
+        const container = document.getElementById('archiveModalIds');
+        container.innerHTML = ids.map(id => `<input type="hidden" name="ids[]" value="${id}">`).join('');
+        document.getElementById('archiveModalCount').textContent = ids.length > 1 ? ` (${ids.length})` : '';
+        const modal = document.getElementById('archiveModal');
+        modal.style.display = 'flex';
+    }
+    function closeArchiveModal() {
+        document.getElementById('archiveModal').style.display = 'none';
+    }
+    function quickArchive(id) {
+        clearSelection();
+        const cb = document.querySelector(`.row-check[value="${id}"]`);
+        if (cb) cb.checked = true;
+        updateBulkBar();
+        openArchiveModal();
+    }
+    function quickUnarchive(id) {
+        if (!confirm('Restore this plan to the active list?')) return;
+        const f = document.createElement('form');
+        f.method = 'POST';
+        f.action = 'archive.php';
+        f.innerHTML = `
+            <input type="hidden" name="action" value="unarchive">
+            <input type="hidden" name="status" value="<?= htmlspecialchars($status) ?>">
+            <input type="hidden" name="ids[]" value="${id}">
+        `;
+        document.body.appendChild(f);
+        f.submit();
+    }
+    // Close modal on background click
+    document.getElementById('archiveModal').addEventListener('click', function(e) {
+        if (e.target === this) closeArchiveModal();
+    });
 
     function showCopySuccess(uniqueId, skin) {
         let targetButton = null;
