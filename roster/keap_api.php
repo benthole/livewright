@@ -107,6 +107,45 @@ function keap_get_custom_field_options($fieldId) {
     return $labels;
 }
 
+/**
+ * Cached wrapper around keap_get_custom_field_options().
+ *
+ * The option list changes rarely, so it's cached (default 15 min) to avoid
+ * hitting the Keap API on every page load. Pass $forceRefresh = true to
+ * bypass the cache and refresh it (used by the manual "Sync" action).
+ *
+ * On a Keap error an empty list is returned and cached briefly (60s) so an
+ * outage doesn't hang every page load on the 20s API timeout.
+ */
+function keap_get_custom_field_options_cached($fieldId, $ttl = 900, $forceRefresh = false) {
+    $cacheLib = __DIR__ . '/lib/keap_cache.php';
+    if (is_file($cacheLib)) {
+        require_once($cacheLib);
+    }
+    $key = "cf_options_{$fieldId}";
+
+    if (!$forceRefresh && function_exists('kcache_get')) {
+        $cached = kcache_get($key);
+        if (is_array($cached)) {
+            return $cached;
+        }
+    }
+
+    $opts = keap_get_custom_field_options($fieldId);
+
+    if (!is_array($opts) || isset($opts['error'])) {
+        if (function_exists('kcache_put')) {
+            kcache_put($key, [], 60);
+        }
+        return [];
+    }
+
+    if (function_exists('kcache_put')) {
+        kcache_put($key, $opts, $ttl);
+    }
+    return $opts;
+}
+
 function keap_get_contacts_by_tag($tagId, $limit = 100, $offset = 0) {
     $token = get_keap_token();
 
