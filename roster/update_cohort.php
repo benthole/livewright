@@ -37,29 +37,42 @@ if ($newCohort === '') {
     exit;
 }
 
-// Validate cohort is in our allowed list or exists in Keap roster data
+// Validate cohort against the configured list, the actual Keap field options,
+// or values already present in local roster data.
 $allCohorts = array_merge($cohorts['active'], $cohorts['functional'], $cohorts['inactive']);
 if (!in_array($newCohort, $allCohorts)) {
-    // Check if it's a valid team from Keap (synced but not yet in config)
-    try {
-        $checkConn = new PDO("mysql:host=$db_host_lw;dbname=$db_name_lw;charset=utf8mb4", $db_user_lw, $db_pass_lw);
-        $checkStmt = $checkConn->query("SELECT data FROM roster");
-        $keapTeams = [];
-        while ($row = $checkStmt->fetch(PDO::FETCH_ASSOC)) {
-            $data = json_decode($row['data'], true);
-            if (!empty($data['custom_fields'])) {
-                foreach ($data['custom_fields'] as $field) {
-                    if ($field['id'] == $cohort_field_id && !empty($field['content'])) {
-                        $keapTeams[$field['content']] = true;
+    $isValid = false;
+
+    // 1. Check the live Keap dropdown options (source of truth).
+    $fieldOptions = keap_get_custom_field_options($cohort_field_id);
+    if (!isset($fieldOptions['error']) && in_array($newCohort, $fieldOptions, true)) {
+        $isValid = true;
+    }
+
+    // 2. Fall back to values already present in local roster data
+    //    (covers legacy values and the case where the Keap lookup failed).
+    if (!$isValid) {
+        try {
+            $checkConn = new PDO("mysql:host=$db_host_lw;dbname=$db_name_lw;charset=utf8mb4", $db_user_lw, $db_pass_lw);
+            $checkStmt = $checkConn->query("SELECT data FROM roster");
+            while ($row = $checkStmt->fetch(PDO::FETCH_ASSOC)) {
+                $data = json_decode($row['data'], true);
+                if (!empty($data['custom_fields'])) {
+                    foreach ($data['custom_fields'] as $field) {
+                        if ($field['id'] == $cohort_field_id && !empty($field['content'])
+                            && $field['content'] === $newCohort) {
+                            $isValid = true;
+                            break 2;
+                        }
                     }
                 }
             }
+        } catch (PDOException $e) {
+            // Ignore; handled by the $isValid check below.
         }
-        if (!isset($keapTeams[$newCohort])) {
-            echo json_encode(['success' => false, 'error' => 'Invalid cohort value']);
-            exit;
-        }
-    } catch (PDOException $e) {
+    }
+
+    if (!$isValid) {
         echo json_encode(['success' => false, 'error' => 'Invalid cohort value']);
         exit;
     }
