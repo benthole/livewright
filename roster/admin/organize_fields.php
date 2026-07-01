@@ -8,10 +8,10 @@
  * Stored in roster_field_options; see lib/field_config.php.
  */
 
-require_once('../includes/auth.php');
-require_once('../config.php');
-require_once('../keap_api.php');
-require_once('../lib/field_config.php');
+require_once(__DIR__ . '/../includes/auth.php');
+require_once(__DIR__ . '/../config.php');
+require_once(__DIR__ . '/../keap_api.php');
+require_once(__DIR__ . '/../lib/field_config.php');
 
 require_auth();
 if (!is_admin()) {

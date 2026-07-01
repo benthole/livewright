@@ -1,7 +1,9 @@
 <?php
 // keap_api.php
 
-require_once('../settings.php');
+// __DIR__-relative so this resolves correctly regardless of the entry
+// script's location (e.g. pages under roster/admin/), not the cwd.
+require_once(__DIR__ . '/../settings.php');
 
 function get_keap_token() {
     // These variables must be defined in settings.php
