@@ -33,6 +33,80 @@ function get_keap_token() {
     return $token;
 }
 
+/**
+ * Fetch the option labels defined for a Keap contact custom field.
+ *
+ * Reads the contact model (which lists every custom field and, for
+ * dropdown/radio fields, its options) and returns the option labels for
+ * the requested field id. Returns an array of label strings (may be empty
+ * for free-text fields), or an ['error' => ...] array on failure.
+ *
+ * Pure-separator options (e.g. "-----") are filtered out.
+ */
+function keap_get_custom_field_options($fieldId) {
+    $token = get_keap_token();
+
+    $url = "https://api.infusionsoft.com/crm/rest/v1/contacts/model";
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            "Authorization: Bearer $token",
+            "Content-Type: application/json"
+        ],
+        CURLOPT_TIMEOUT => 20,
+    ]);
+
+    $resp = curl_exec($ch);
+
+    if (curl_errno($ch)) {
+        $error = curl_error($ch);
+        curl_close($ch);
+        error_log('Curl error (contact model): ' . $error);
+        return ['error' => 'Curl error: ' . $error];
+    }
+
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $data = json_decode($resp, true);
+
+    if ($httpCode !== 200 || empty($data['custom_fields'])) {
+        error_log('Keap API Error (contact model): ' . $resp);
+        return ['error' => 'API Error', 'http_code' => $httpCode, 'response' => $data];
+    }
+
+    // Locate the requested field within the model's custom_fields list.
+    $field = null;
+    foreach ($data['custom_fields'] as $cf) {
+        if (isset($cf['id']) && (string)$cf['id'] === (string)$fieldId) {
+            $field = $cf;
+            break;
+        }
+    }
+
+    if ($field === null) {
+        return ['error' => 'Custom field not found', 'field_id' => $fieldId];
+    }
+
+    // Each option carries a 'label'. Skip pure-separator entries (only dashes).
+    $labels = [];
+    if (!empty($field['options']) && is_array($field['options'])) {
+        foreach ($field['options'] as $opt) {
+            if (!isset($opt['label']) || $opt['label'] === '') {
+                continue;
+            }
+            if (preg_match('/^-+$/', $opt['label'])) {
+                continue; // dropdown separator, not a real team
+            }
+            $labels[] = $opt['label'];
+        }
+    }
+
+    return $labels;
+}
+
 function keap_get_contacts_by_tag($tagId, $limit = 100, $offset = 0) {
     $token = get_keap_token();
 
