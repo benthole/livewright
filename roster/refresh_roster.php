@@ -11,8 +11,14 @@ if (!is_logged_in()) {
     exit;
 }
 
-// Set longer execution time for API sync (may be disabled on some hosts)
-@set_time_limit(120);
+// Set longer execution time for API sync.
+// Guard with function_exists(): the server's PHP-FPM pool lists set_time_limit
+// in disable_functions, and under PHP 8+ calling a disabled function throws a
+// fatal Error that @ does NOT suppress (unlike the PHP 7 warning). function_exists
+// returns false for disabled functions, so this safely skips the call there.
+if (function_exists('set_time_limit')) {
+    @set_time_limit(120);
+}
 
 // Run the search/sync process
 require_once('keap_api.php');
