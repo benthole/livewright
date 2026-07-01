@@ -207,9 +207,17 @@ if ($_POST) {
                         $package['coach'] = trim($_POST["support_package_{$p}_coach"]);
                         $package['duration_minutes'] = (int)($_POST["support_package_{$p}_duration"] ?? 0);
                         $package['sessions'] = (int)($_POST["support_package_{$p}_sessions"] ?? 0);
+                        $package['bill_sessions'] = (int)($_POST["support_package_{$p}_bill_sessions"] ?? 0);
                         $package['regular_price'] = floatval($_POST["support_package_{$p}_regular_price"] ?? 0);
                         $package['package_price'] = floatval($_POST["support_package_{$p}_package_price"] ?? 0);
+                        $package['discount_percent'] = floatval($_POST["support_package_{$p}_discount_percent"] ?? 0);
+                        $package['discount_amount'] = floatval($_POST["support_package_{$p}_discount_amount"] ?? 0);
+                        // Net price is what the client actually pays (package price less any manual discount).
+                        $net = $_POST["support_package_{$p}_net_price"] ?? '';
+                        $package['net_price'] = ($net !== '') ? floatval($net) : $package['package_price'];
                         $package['savings'] = floatval($_POST["support_package_{$p}_savings"] ?? 0);
+                        // Keep the checkout price aligned with the net price.
+                        $package['price_monthly'] = $package['net_price'];
                     }
 
                     $support_packages[] = $package;
@@ -574,15 +582,23 @@ require_once 'includes/header.php';
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Number of Sessions:</label>
-                        <select id="builder-sessions" onchange="updateBuilderPreview()" disabled>
-                            <option value="">Select Sessions...</option>
-                            <option value="1">1 Session</option>
-                            <option value="3">3 Sessions</option>
-                            <option value="5">5 Sessions</option>
-                            <option value="10">10 Sessions</option>
-                            <option value="20">20+ Sessions</option>
+                        <label>Sessions (delivered):</label>
+                        <input type="number" id="builder-sessions" min="1" step="1" placeholder="e.g. 7" oninput="updateBuilderPreview()" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Bill at tier:</label>
+                        <select id="builder-bill" onchange="updateBuilderPreview()" disabled>
+                            <option value="">Auto (match sessions)</option>
+                            <option value="1">1-session price</option>
+                            <option value="3">3-session price</option>
+                            <option value="5">5-session price</option>
+                            <option value="10">10-session price</option>
+                            <option value="20">20-session price</option>
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Discount %:</label>
+                        <input type="number" id="builder-discount" min="0" max="100" step="1" placeholder="0" oninput="updateBuilderPreview()" disabled>
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
@@ -591,6 +607,9 @@ require_once 'includes/header.php';
                         </button>
                     </div>
                 </div>
+                <p class="section-description" style="margin:6px 0 0;font-size:0.82em;">
+                    "Bill at tier" lets you deliver an off-tier number of sessions (e.g. 7, every 3 weeks) while charging a flat package price point (e.g. the 5-session package). "Discount %" applies a manual reduction on top (e.g. 20% Canadian discount).
+                </p>
                 <div class="builder-preview" id="builder-preview">
                     <div class="preview-grid">
                         <div class="preview-item">
@@ -600,6 +619,14 @@ require_once 'includes/header.php';
                         <div class="preview-item">
                             <div class="label">Package Price</div>
                             <div class="value package" id="preview-package">$0.00</div>
+                        </div>
+                        <div class="preview-item">
+                            <div class="label">Discount</div>
+                            <div class="value discount" id="preview-discount">$0.00</div>
+                        </div>
+                        <div class="preview-item">
+                            <div class="label">Net Price</div>
+                            <div class="value package" id="preview-net">$0.00</div>
                         </div>
                         <div class="preview-item">
                             <div class="label">Client Saves</div>
@@ -631,10 +658,14 @@ require_once 'includes/header.php';
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_coach" value="<?= htmlspecialchars($pkg['coach'] ?? '') ?>">
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_duration" value="<?= htmlspecialchars($pkg['duration_minutes'] ?? '') ?>">
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_sessions" value="<?= htmlspecialchars($pkg['sessions'] ?? '') ?>">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_bill_sessions" value="<?= htmlspecialchars($pkg['bill_sessions'] ?? '') ?>">
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_regular_price" value="<?= htmlspecialchars($pkg['regular_price'] ?? '') ?>">
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_package_price" value="<?= htmlspecialchars($pkg['package_price'] ?? '') ?>">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_discount_percent" value="<?= htmlspecialchars($pkg['discount_percent'] ?? '') ?>">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_discount_amount" value="<?= htmlspecialchars($pkg['discount_amount'] ?? '') ?>">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_net_price" value="<?= htmlspecialchars($pkg['net_price'] ?? $pkg['package_price'] ?? '') ?>">
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_savings" value="<?= htmlspecialchars($pkg['savings'] ?? '') ?>">
-                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_price" value="<?= htmlspecialchars($pkg['package_price'] ?? $pkg['price_monthly'] ?? '') ?>">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_price" value="<?= htmlspecialchars($pkg['net_price'] ?? $pkg['package_price'] ?? $pkg['price_monthly'] ?? '') ?>">
                                 <div class="package-savings-header">
                                     <span class="name"><?= htmlspecialchars($pkg['name']) ?></span>
                                     <button type="button" class="remove-btn" onclick="removePackageWithSavings(this)">Remove</button>
@@ -650,6 +681,16 @@ require_once 'includes/header.php';
                                             <div class="label">Package Price</div>
                                             <div class="amount">$<?= number_format($pkg['package_price'], 2) ?></div>
                                         </div>
+                                        <?php if (!empty($pkg['discount_amount'])): ?>
+                                        <div class="pricing-box discount">
+                                            <div class="label">Discount (<?= rtrim(rtrim(number_format($pkg['discount_percent'] ?? 0, 1), '0'), '.') ?>%)</div>
+                                            <div class="amount">-$<?= number_format($pkg['discount_amount'], 2) ?></div>
+                                        </div>
+                                        <div class="pricing-box package">
+                                            <div class="label">Net Price</div>
+                                            <div class="amount">$<?= number_format($pkg['net_price'] ?? $pkg['package_price'], 2) ?></div>
+                                        </div>
+                                        <?php endif; ?>
                                         <div class="pricing-box savings">
                                             <div class="label">Savings</div>
                                             <div class="amount">$<?= number_format($pkg['savings'], 2) ?></div>
@@ -974,12 +1015,16 @@ require_once 'includes/header.php';
         const coach = document.getElementById('builder-coach').value;
         const durationSelect = document.getElementById('builder-duration');
         const sessionsSelect = document.getElementById('builder-sessions');
+        const billSelect = document.getElementById('builder-bill');
+        const discountInput = document.getElementById('builder-discount');
         const addBtn = document.getElementById('add-package-btn');
 
         // Reset downstream controls
         durationSelect.innerHTML = '<option value="">Select Duration...</option>';
         durationSelect.disabled = true;
         sessionsSelect.disabled = true;
+        billSelect.disabled = true;
+        discountInput.disabled = true;
         addBtn.disabled = true;
         document.getElementById('builder-preview').classList.remove('visible');
         builderRates = null;
@@ -1006,21 +1051,24 @@ require_once 'includes/header.php';
         }
     }
 
-    // Update preview when duration or sessions change
+    // Update preview when duration, sessions, tier, or discount change
     async function updateBuilderPreview() {
         const coach = document.getElementById('builder-coach').value;
         const duration = document.getElementById('builder-duration').value;
         const sessions = document.getElementById('builder-sessions').value;
-        const sessionsSelect = document.getElementById('builder-sessions');
+        const billSessions = document.getElementById('builder-bill').value;
+        const discount = document.getElementById('builder-discount').value;
         const addBtn = document.getElementById('add-package-btn');
         const preview = document.getElementById('builder-preview');
 
-        // Enable sessions dropdown when duration is selected
+        // Enable sessions / tier / discount inputs once duration is selected
         if (duration) {
-            sessionsSelect.disabled = false;
+            document.getElementById('builder-sessions').disabled = false;
+            document.getElementById('builder-bill').disabled = false;
+            document.getElementById('builder-discount').disabled = false;
         }
 
-        // Hide preview and disable button if not all selected
+        // Hide preview and disable button if not all required fields set
         if (!coach || !duration || !sessions) {
             preview.classList.remove('visible');
             addBtn.disabled = true;
@@ -1029,15 +1077,23 @@ require_once 'includes/header.php';
         }
 
         try {
-            const response = await fetch(`api/coaching-rates.php?coach=${encodeURIComponent(coach)}&duration=${duration}&sessions=${sessions}`);
+            let url = `api/coaching-rates.php?coach=${encodeURIComponent(coach)}&duration=${duration}&sessions=${sessions}`;
+            if (billSessions) url += `&bill_sessions=${billSessions}`;
+            if (discount) url += `&discount=${discount}`;
+            const response = await fetch(url);
             const data = await response.json();
 
             if (data.calculation) {
                 currentCalculation = data.calculation;
+                const c = data.calculation;
 
-                document.getElementById('preview-regular').textContent = `$${data.calculation.regular_price.toFixed(2)}`;
-                document.getElementById('preview-package').textContent = `$${data.calculation.package_price.toFixed(2)}`;
-                document.getElementById('preview-savings').textContent = `$${data.calculation.savings.toFixed(2)} (${data.calculation.savings_percent}%)`;
+                document.getElementById('preview-regular').textContent = `$${c.regular_price.toFixed(2)}`;
+                document.getElementById('preview-package').textContent = `$${c.package_price.toFixed(2)}`;
+                document.getElementById('preview-discount').textContent = c.discount_amount > 0
+                    ? `-$${c.discount_amount.toFixed(2)} (${c.discount_percent}%)`
+                    : '$0.00';
+                document.getElementById('preview-net').textContent = `$${c.net_price.toFixed(2)}`;
+                document.getElementById('preview-savings').textContent = `$${c.savings.toFixed(2)} (${c.savings_percent}%)`;
 
                 preview.classList.add('visible');
                 addBtn.disabled = false;
@@ -1060,37 +1116,53 @@ require_once 'includes/header.php';
 
         const coach = document.getElementById('builder-coach').value;
         const duration = document.getElementById('builder-duration').value;
-        const sessions = document.getElementById('builder-sessions').value;
+        const c = currentCalculation;
+        const n = supportPackageCount;
+        const discountRow = c.discount_amount > 0
+            ? `<div class="pricing-box discount">
+                            <div class="label">Discount (${c.discount_percent}%)</div>
+                            <div class="amount">-$${c.discount_amount.toFixed(2)}</div>
+                        </div>`
+            : '';
 
         const packageHtml = `
             <div class="package-with-savings">
-                <input type="hidden" name="support_package_${supportPackageCount}_name" value="${currentCalculation.package_name}">
-                <input type="hidden" name="support_package_${supportPackageCount}_description" value="${currentCalculation.description}">
-                <input type="hidden" name="support_package_${supportPackageCount}_coach" value="${coach}">
-                <input type="hidden" name="support_package_${supportPackageCount}_duration" value="${duration}">
-                <input type="hidden" name="support_package_${supportPackageCount}_sessions" value="${sessions}">
-                <input type="hidden" name="support_package_${supportPackageCount}_regular_price" value="${currentCalculation.regular_price}">
-                <input type="hidden" name="support_package_${supportPackageCount}_package_price" value="${currentCalculation.package_price}">
-                <input type="hidden" name="support_package_${supportPackageCount}_savings" value="${currentCalculation.savings}">
-                <input type="hidden" name="support_package_${supportPackageCount}_price" value="${currentCalculation.package_price}">
+                <input type="hidden" name="support_package_${n}_name" value="${c.package_name}">
+                <input type="hidden" name="support_package_${n}_description" value="${c.description}">
+                <input type="hidden" name="support_package_${n}_coach" value="${coach}">
+                <input type="hidden" name="support_package_${n}_duration" value="${duration}">
+                <input type="hidden" name="support_package_${n}_sessions" value="${c.sessions}">
+                <input type="hidden" name="support_package_${n}_bill_sessions" value="${c.bill_sessions}">
+                <input type="hidden" name="support_package_${n}_regular_price" value="${c.regular_price}">
+                <input type="hidden" name="support_package_${n}_package_price" value="${c.package_price}">
+                <input type="hidden" name="support_package_${n}_discount_percent" value="${c.discount_percent}">
+                <input type="hidden" name="support_package_${n}_discount_amount" value="${c.discount_amount}">
+                <input type="hidden" name="support_package_${n}_net_price" value="${c.net_price}">
+                <input type="hidden" name="support_package_${n}_savings" value="${c.savings}">
+                <input type="hidden" name="support_package_${n}_price" value="${c.net_price}">
                 <div class="package-savings-header">
-                    <span class="name">${currentCalculation.package_name}</span>
+                    <span class="name">${c.package_name}</span>
                     <button type="button" class="remove-btn" onclick="removePackageWithSavings(this)">Remove</button>
                 </div>
                 <div class="package-savings-body">
-                    <div class="description">${currentCalculation.description}</div>
+                    <div class="description">${c.description}</div>
                     <div class="package-pricing-display">
                         <div class="pricing-box regular">
                             <div class="label">Regular Price</div>
-                            <div class="amount">$${currentCalculation.regular_price.toFixed(2)}</div>
+                            <div class="amount">$${c.regular_price.toFixed(2)}</div>
                         </div>
                         <div class="pricing-box package">
                             <div class="label">Package Price</div>
-                            <div class="amount">$${currentCalculation.package_price.toFixed(2)}</div>
+                            <div class="amount">$${c.package_price.toFixed(2)}</div>
+                        </div>
+                        ${discountRow}
+                        <div class="pricing-box package">
+                            <div class="label">Net Price</div>
+                            <div class="amount">$${c.net_price.toFixed(2)}</div>
                         </div>
                         <div class="pricing-box savings">
                             <div class="label">Savings</div>
-                            <div class="amount">$${currentCalculation.savings.toFixed(2)}</div>
+                            <div class="amount">$${c.savings.toFixed(2)}</div>
                         </div>
                     </div>
                 </div>
@@ -1105,6 +1177,10 @@ require_once 'includes/header.php';
         document.getElementById('builder-duration').disabled = true;
         document.getElementById('builder-sessions').value = '';
         document.getElementById('builder-sessions').disabled = true;
+        document.getElementById('builder-bill').value = '';
+        document.getElementById('builder-bill').disabled = true;
+        document.getElementById('builder-discount').value = '';
+        document.getElementById('builder-discount').disabled = true;
         document.getElementById('add-package-btn').disabled = true;
         document.getElementById('builder-preview').classList.remove('visible');
         currentCalculation = null;

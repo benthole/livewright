@@ -571,6 +571,10 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                             <div class="support-packages-grid">
                                 <?php foreach ($support_packages as $pkg):
                                     $has_savings = isset($pkg['regular_price']) && isset($pkg['package_price']) && isset($pkg['savings']) && $pkg['savings'] > 0;
+                                    // Net price is what the client pays: package price less any manual discount.
+                                    $net_price = $pkg['net_price'] ?? $pkg['package_price'] ?? $pkg['price_monthly'] ?? 0;
+                                    $has_discount = $has_savings && !empty($pkg['discount_amount']);
+                                    $checkout_price = $has_savings ? $net_price : ($pkg['price_monthly'] ?? 0);
                                 ?>
                                     <div class="support-package-card <?= $has_savings ? 'has-savings' : '' ?>">
                                         <div class="support-package-name">
@@ -587,9 +591,19 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                                                     <span class="label">Regular Price:</span>
                                                     <span class="value">$<?= number_format($pkg['regular_price'], 2) ?></span>
                                                 </div>
+                                                <?php if ($has_discount): ?>
+                                                <div class="pricing-row package">
+                                                    <span class="label">Package Price:</span>
+                                                    <span class="value">$<?= number_format($pkg['package_price'], 2) ?></span>
+                                                </div>
+                                                <div class="pricing-row discount">
+                                                    <span class="label">Discount (<?= rtrim(rtrim(number_format($pkg['discount_percent'] ?? 0, 1), '0'), '.') ?>%):</span>
+                                                    <span class="value">-$<?= number_format($pkg['discount_amount'], 2) ?></span>
+                                                </div>
+                                                <?php endif; ?>
                                                 <div class="pricing-row package">
                                                     <span class="label">Your Price:</span>
-                                                    <span class="value">$<?= number_format($pkg['package_price'], 2) ?></span>
+                                                    <span class="value">$<?= number_format($net_price, 2) ?></span>
                                                 </div>
                                             </div>
                                         <?php else: ?>
@@ -599,7 +613,7 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                                         <?php endif; ?>
 
                                         <label class="support-package-checkbox">
-                                            <input type="checkbox" name="support_packages[]" value="<?= htmlspecialchars($pkg['name']) ?>" data-price="<?= $has_savings ? $pkg['package_price'] : $pkg['price_monthly'] ?>">
+                                            <input type="checkbox" name="support_packages[]" value="<?= htmlspecialchars($pkg['name']) ?>" data-price="<?= $checkout_price ?>">
                                             Add to my plan
                                         </label>
                                     </div>
