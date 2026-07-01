@@ -4,6 +4,7 @@
 require_once('includes/auth.php');
 require_once('config.php');
 require_once('keap_api.php');
+require_once('lib/field_config.php');
 
 // Require authentication
 require_auth();
@@ -12,20 +13,6 @@ require_auth();
 $current_user = get_logged_in_user();
 $user_can_edit = can_edit();
 $user_is_admin = is_admin();
-
-// Team dropdown options: pull the live Keap field options (cached) so teams
-// added in Keap appear and persist across reloads without editing config.php.
-// Any option not already grouped in $cohorts is shown under a "From Keap" group.
-$configuredCohorts = array_merge(
-    $cohorts['active'] ?? [],
-    $cohorts['functional'] ?? [],
-    $cohorts['inactive'] ?? []
-);
-$keapTeamOptions = function_exists('keap_get_custom_field_options_cached')
-    ? keap_get_custom_field_options_cached($cohort_field_id)
-    : [];
-$extraKeapTeams = array_values(array_diff($keapTeamOptions, $configuredCohorts));
-sort($extraKeapTeams);
 
 // Check if viewing dropped contacts
 $viewDropped = isset($_GET['dropped']) && $_GET['dropped'] === '1';
@@ -36,6 +23,32 @@ try {
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
+}
+
+// Dropdown values from the admin Field Organizer (grouping/order/hide),
+// which merges live Keap options + config + local data. Falls back to config
+// automatically when nothing is organized yet. See lib/field_config.php and
+// admin/organize_fields.php. Guarded so any organizer/DB failure degrades to
+// config-based rendering instead of breaking the roster page.
+try {
+    $cohortGroups = fc_dropdown_groups($conn, 'cohort');       // [groupLabel => [team, ...]]
+    $individualCoachValues = [];
+    foreach (fc_dropdown_groups($conn, 'individual_coach') as $vals) {
+        $individualCoachValues = array_merge($individualCoachValues, $vals);
+    }
+    $groupCoachValues = [];
+    foreach (fc_dropdown_groups($conn, 'group_coach') as $vals) {
+        $groupCoachValues = array_merge($groupCoachValues, $vals);
+    }
+} catch (Exception $e) {
+    error_log('Field organizer fallback (index): ' . $e->getMessage());
+    $cohortGroups = [
+        'Active'     => $cohorts['active'] ?? [],
+        'Functional' => $cohorts['functional'] ?? [],
+        'Inactive'   => $cohorts['inactive'] ?? [],
+    ];
+    $individualCoachValues = $individual_coaches ?? [];
+    $groupCoachValues = $group_coaches ?? [];
 }
 
 // Fetch all roster entries
@@ -1101,6 +1114,7 @@ function getCustomFieldById($customFields, $fieldId) {
                 </div>
                 <a href="campaign_reports.php" class="header-link">Campaign Reports</a>
                 <?php if ($user_is_admin): ?>
+                <a href="admin/organize_fields.php" class="header-link">Organize Fields</a>
                 <a href="admin/users.php" class="header-link">Manage Users</a>
                 <?php endif; ?>
                 <a href="logout.php" class="header-link">Logout</a>
@@ -1353,28 +1367,13 @@ function getCustomFieldById($customFields, $fieldId) {
                     <div style="display: flex; gap: 8px; align-items: flex-start;">
                         <select id="cohortSelect" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
                             <option value="">-- Select Team --</option>
-                            <optgroup label="Active">
-                                <?php foreach ($cohorts['active'] as $cohort): ?>
+                            <?php foreach ($cohortGroups as $groupLabel => $groupTeams): ?>
+                            <optgroup label="<?php echo htmlspecialchars($groupLabel); ?>">
+                                <?php foreach ($groupTeams as $cohort): ?>
                                 <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
                                 <?php endforeach; ?>
                             </optgroup>
-                            <optgroup label="Functional">
-                                <?php foreach ($cohorts['functional'] as $cohort): ?>
-                                <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                            <optgroup label="Inactive">
-                                <?php foreach ($cohorts['inactive'] as $cohort): ?>
-                                <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                            <?php if (!empty($extraKeapTeams)): ?>
-                            <optgroup label="From Keap">
-                                <?php foreach ($extraKeapTeams as $cohort): ?>
-                                <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                            <?php endif; ?>
+                            <?php endforeach; ?>
                         </select>
                         <button type="button" id="syncTeamsBtn" title="Sync team values from Keap" style="padding: 10px 14px; border: 1px solid #17a2b8; background: white; color: #17a2b8; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;" onmouseover="this.style.background='#17a2b8';this.style.color='white'" onmouseout="this.style.background='white';this.style.color='#17a2b8'">🔄 Sync</button>
                     </div>
@@ -1454,7 +1453,7 @@ function getCustomFieldById($customFields, $fieldId) {
                     </div>
 
                     <div id="individualCoachCheckboxes" class="coach-list-container">
-                        <?php foreach ($individual_coaches as $coach): ?>
+                        <?php foreach ($individualCoachValues as $coach): ?>
                         <label class="coach-list-item">
                             <input type="checkbox" name="individualCoaches[]" value="<?php echo htmlspecialchars($coach); ?>">
                             <span class="coach-name"><?php echo htmlspecialchars($coach); ?></span>
@@ -1469,7 +1468,7 @@ function getCustomFieldById($customFields, $fieldId) {
                     <select id="groupCoachSelect" style="width: 100%; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #334155; background: white; cursor: pointer;">
                         <option value="">Keep current assignment</option>
                         <option value="__CLEAR__">Clear assignment</option>
-                        <?php foreach ($group_coaches as $coach): ?>
+                        <?php foreach ($groupCoachValues as $coach): ?>
                         <option value="<?php echo htmlspecialchars($coach); ?>"><?php echo htmlspecialchars($coach); ?></option>
                         <?php endforeach; ?>
                     </select>

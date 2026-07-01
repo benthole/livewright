@@ -43,19 +43,34 @@ if (!$hasIndividualChange && !$hasGroupChange) {
     exit;
 }
 
+// Build allowed coach lists: config values plus the live Keap field options,
+// so values surfaced by the Field Organizer (from Keap) are assignable.
+$allowedIndividual = $individual_coaches;
+$allowedGroup = $group_coaches;
+if (function_exists('keap_get_custom_field_options_cached')) {
+    $indOpts = keap_get_custom_field_options_cached($individual_coach_field_id);
+    if (is_array($indOpts)) {
+        $allowedIndividual = array_values(array_unique(array_merge($allowedIndividual, $indOpts)));
+    }
+    $grpOpts = keap_get_custom_field_options_cached($group_coach_field_id);
+    if (is_array($grpOpts)) {
+        $allowedGroup = array_values(array_unique(array_merge($allowedGroup, $grpOpts)));
+    }
+}
+
 // Validate coach values (allow __CLEAR__ for clearing the field)
 // Individual coach can now be comma-separated for multiple coaches
 if ($newIndividualCoach !== '' && $newIndividualCoach !== '__CLEAR__') {
     $coaches = array_map('trim', explode(',', $newIndividualCoach));
     foreach ($coaches as $coach) {
-        if (!in_array($coach, $individual_coaches)) {
+        if (!in_array($coach, $allowedIndividual)) {
             echo json_encode(['success' => false, 'error' => 'Invalid individual coach value: ' . $coach]);
             exit;
         }
     }
 }
 
-if ($newGroupCoach !== '' && $newGroupCoach !== '__CLEAR__' && !in_array($newGroupCoach, $group_coaches)) {
+if ($newGroupCoach !== '' && $newGroupCoach !== '__CLEAR__' && !in_array($newGroupCoach, $allowedGroup)) {
     echo json_encode(['success' => false, 'error' => 'Invalid group coach value']);
     exit;
 }
