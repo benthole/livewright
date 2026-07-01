@@ -629,6 +629,19 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                                             </div>
                                         <?php endif; ?>
 
+                                        <?php
+                                        // Installment breakdown: first payment charged at checkout, rest set up in Keap.
+                                        $inst_count = (int)($pkg['installments'] ?? 1);
+                                        if ($coaching_choose_one && $inst_count > 1):
+                                            $inst_rest = round($checkout_price / $inst_count, 2);
+                                            $inst_first = round($checkout_price - $inst_rest * ($inst_count - 1), 2);
+                                        ?>
+                                            <div class="pricing-row" style="border-top:1px dashed #ccc;margin-top:6px;padding-top:6px;">
+                                                <span class="label">Or <?= $inst_count ?> payments:</span>
+                                                <span class="value">$<?= number_format($inst_first, 2) ?> today, then <?= $inst_count - 1 ?> × $<?= number_format($inst_rest, 2) ?></span>
+                                            </div>
+                                        <?php endif; ?>
+
                                         <?php if ($coaching_choose_one): ?>
                                             <button type="button" class="choose-package-btn" data-pkg-index="<?= (int)$pkg_i ?>"
                                                 onclick="selectPackage(<?= (int)$pkg_i ?>, '<?= htmlspecialchars(addslashes($pkg['name']), ENT_QUOTES) ?>', <?= (float)$checkout_price ?>)">

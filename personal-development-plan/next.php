@@ -20,6 +20,7 @@ $selected_option = null;
 // A coaching package selection arrives as "pkg_<index>" (an index into the
 // contract's support_packages JSON), rather than a numeric pricing_options id.
 $package_index = null;
+$package_plan = null;
 if (is_string($payment_option_id) && preg_match('/^pkg_(\d+)$/', $payment_option_id, $m)) {
     $package_index = (int)$m[1];
 }
@@ -55,6 +56,10 @@ if (empty($payment_option_id) || empty($contract_uid) || empty($first_name) || e
                 'type' => 'OneTime',
                 'deposit_amount' => 0,
             ];
+            // Installment plan: the first payment is charged today; the rest are set
+            // up in Keap. Uses the shared helper so checkout charges the same amount.
+            require_once __DIR__ . '/lib/keap-pdp-helpers.php';
+            $package_plan = pdp_installment_plan($net, $pkg['installments'] ?? 1);
         }
     } else {
         // Get selected pricing option
@@ -90,6 +95,14 @@ $has_monthly_deposit = ($plan_type === 'Monthly' && $plan_deposit > 0);
 // Amount charged today + label shown on the pay button / "Due today" row.
 $initial_amount = $has_monthly_deposit ? $plan_deposit : $plan_price;
 $initial_label  = $has_monthly_deposit ? 'Initial payment' : ($plan_type === 'Yearly' ? 'Pay in Full' : 'First payment');
+
+// Coaching package paid in installments: charge the first installment today;
+// the remaining installments are set up in Keap (like the Monthly plan).
+$has_installments = ($is_package && !empty($package_plan) && $package_plan['count'] > 1);
+if ($has_installments) {
+    $initial_amount = $package_plan['first'];
+    $initial_label = 'Payment 1 of ' . $package_plan['count'];
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -242,6 +255,15 @@ $initial_label  = $has_monthly_deposit ? 'Initial payment' : ($plan_type === 'Ye
                             <div class="line-item recurring">
                                 <span class="label">Then $<?= number_format($plan_price, 2) ?>/month for 12 months</span>
                                 <span class="amount">starting next billing cycle</span>
+                            </div>
+                        <?php elseif ($has_installments): ?>
+                            <div class="line-item recurring">
+                                <span class="label">Then <?= $package_plan['count'] - 1 ?> × $<?= number_format($package_plan['rest'], 2) ?> (<?= number_format($package_plan['remaining'], 2) ?> remaining)</span>
+                                <span class="amount">billed on a schedule</span>
+                            </div>
+                            <div class="line-item">
+                                <span class="label">Package total</span>
+                                <span class="amount">$<?= number_format($plan_price, 2) ?></span>
                             </div>
                         <?php endif; ?>
                         <div class="line-item total">

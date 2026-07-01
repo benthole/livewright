@@ -84,12 +84,16 @@ try {
         }
         $package = $packages[$package_index];
         // Net price is what the client pays (package price less any manual discount).
-        $amount = (float)($package['net_price'] ?? $package['package_price'] ?? $package['price_monthly'] ?? 0);
-        if ($amount <= 0) {
+        $package_net = (float)($package['net_price'] ?? $package['package_price'] ?? $package['price_monthly'] ?? 0);
+        if ($package_net <= 0) {
             http_response_code(400);
             echo json_encode(['error' => 'Selected coaching package has no price']);
             exit;
         }
+        // Installments: charge only the first installment now; the rest are set up
+        // in Keap. The split is derived server-side (never trusted from the request).
+        $package_plan = pdp_installment_plan($package_net, $package['installments'] ?? 1);
+        $amount = $package_plan['first'];
     } else {
         // Get pricing option
         $stmt = $pdo->prepare("SELECT * FROM pricing_options WHERE id = ? AND contract_id = ? AND deleted_at IS NULL");
@@ -146,10 +150,13 @@ try {
     if ($is_package) {
         $packageName = $package['name'] ?? ($plan_description ?: 'Coaching Package');
         $packageDesc = $package['description'] ?? $packageName;
-        $orderTitle = 'Coaching Package: ' . $packageName;
+        $installmentSuffix = ($package_plan['count'] > 1)
+            ? " — Payment 1 of {$package_plan['count']}"
+            : '';
+        $orderTitle = 'Coaching Package: ' . $packageName . $installmentSuffix;
         $orderItems = [
             [
-                'description' => $packageDesc,
+                'description' => $packageDesc . $installmentSuffix,
                 'price' => $amount,
                 'quantity' => 1,
                 'product_id' => KEAP_COACHING_PACKAGE_PRODUCT_ID,
@@ -187,7 +194,9 @@ try {
 
     // Process payment via Keap
     if ($is_package) {
-        $paymentNotes = "Coaching package (one-time): {$packageName} — \${$amount}";
+        $paymentNotes = ($package_plan['count'] > 1)
+            ? "Coaching package: {$packageName}. Payment 1 of {$package_plan['count']} = \${$amount}. Remaining " . ($package_plan['count'] - 1) . " payments (total \${$package_plan['remaining']}) to be set up in Keap. Package total \${$package_net}."
+            : "Coaching package (one-time): {$packageName} — \${$amount}";
     } else {
         $paymentNotes = $is_deposit
             ? "PDP initial payment of \${$amount}. Plan: {$option['description']} ({$option['sub_option_name']} - {$option['type']}) at \${$option['price']}/{$option['type']}. Remaining recurring charges handled separately."
@@ -218,7 +227,11 @@ try {
                 'package_name' => $packageName,
                 'package_price' => $package['package_price'] ?? null,
                 'discount_percent' => $package['discount_percent'] ?? null,
-                'net_price' => $amount,
+                'net_price' => $package_net,
+                'installments' => $package_plan['count'],
+                'installment_number' => 1,
+                'installment_amount' => $amount,
+                'installments_remaining_total' => $package_plan['remaining'],
             ],
         ]);
 

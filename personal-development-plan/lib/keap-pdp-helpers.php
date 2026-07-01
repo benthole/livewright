@@ -173,6 +173,25 @@ function pdp_keap_get_payment_session($contactId) {
     return ['success' => false, 'session_key' => null, 'error' => $result['error'] ?? 'Failed to get payment session'];
 }
 
+/**
+ * Split a net price into N installments. The first installment is charged at
+ * checkout; the remaining ones are set up in Keap (like the Monthly plan).
+ * The first payment absorbs any rounding remainder so the parts sum to net.
+ *
+ * @return array ['count'=>int, 'first'=>float, 'rest'=>float, 'remaining'=>float]
+ */
+function pdp_installment_plan($net, $count) {
+    $net = (float)$net;
+    $count = (int)$count;
+    if ($count < 1) $count = 1;
+    if ($count === 1) {
+        return ['count' => 1, 'first' => $net, 'rest' => 0.0, 'remaining' => 0.0];
+    }
+    $rest = round($net / $count, 2);
+    $first = round($net - $rest * ($count - 1), 2);
+    return ['count' => $count, 'first' => $first, 'rest' => $rest, 'remaining' => round($net - $first, 2)];
+}
+
 // Keap product IDs for PDP orders
 define('KEAP_PDP_PRODUCT_ID', 99);              // Personal Development Plan
 define('KEAP_PDP_DEPOSIT_PRODUCT_ID', 97);      // Personal Development Plan (Deposit)

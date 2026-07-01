@@ -216,6 +216,10 @@ if ($_POST) {
                         $net = $_POST["support_package_{$p}_net_price"] ?? '';
                         $package['net_price'] = ($net !== '') ? floatval($net) : $package['package_price'];
                         $package['savings'] = floatval($_POST["support_package_{$p}_savings"] ?? 0);
+                        // Number of installments (1 = pay in full). First installment is
+                        // charged at checkout; remaining ones are set up in Keap.
+                        $inst = (int)($_POST["support_package_{$p}_installments"] ?? 1);
+                        $package['installments'] = ($inst >= 1 && $inst <= 12) ? $inst : 1;
                         // Keep the checkout price aligned with the net price.
                         $package['price_monthly'] = $package['net_price'];
                     }
@@ -619,6 +623,10 @@ require_once 'includes/header.php';
                         <input type="number" id="builder-discount" min="0" max="100" step="1" placeholder="0" oninput="updateBuilderPreview()" disabled>
                     </div>
                     <div class="form-group">
+                        <label>Installments:</label>
+                        <input type="number" id="builder-installments" min="1" max="12" step="1" placeholder="1" oninput="updateBuilderPreview()" disabled>
+                    </div>
+                    <div class="form-group">
                         <label>&nbsp;</label>
                         <button type="button" class="add-package-btn" id="add-package-btn" onclick="addBuiltPackage()" disabled>
                             Add Package
@@ -626,7 +634,7 @@ require_once 'includes/header.php';
                     </div>
                 </div>
                 <p class="section-description" style="margin:6px 0 0;font-size:0.82em;">
-                    "Bill at tier" lets you deliver an off-tier number of sessions (e.g. 7, every 3 weeks) while charging a flat package price point (e.g. the 5-session package). "Discount %" applies a manual reduction on top (e.g. 20% Canadian discount).
+                    "Bill at tier" lets you deliver an off-tier number of sessions (e.g. 7, every 3 weeks) while charging a flat package price point (e.g. the 5-session package). "Discount %" applies a manual reduction on top (e.g. 20% Canadian discount). "Installments" splits the net price into N payments — the first is charged at checkout, the rest are set up in Keap (like the Monthly plan).
                 </p>
                 <div class="builder-preview" id="builder-preview">
                     <div class="preview-grid">
@@ -649,6 +657,10 @@ require_once 'includes/header.php';
                         <div class="preview-item">
                             <div class="label">Client Saves</div>
                             <div class="value savings" id="preview-savings">$0.00</div>
+                        </div>
+                        <div class="preview-item">
+                            <div class="label">Installments</div>
+                            <div class="value" id="preview-installments">Pay in full</div>
                         </div>
                     </div>
                 </div>
@@ -682,6 +694,7 @@ require_once 'includes/header.php';
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_discount_percent" value="<?= htmlspecialchars($pkg['discount_percent'] ?? '') ?>">
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_discount_amount" value="<?= htmlspecialchars($pkg['discount_amount'] ?? '') ?>">
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_net_price" value="<?= htmlspecialchars($pkg['net_price'] ?? $pkg['package_price'] ?? '') ?>">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_installments" value="<?= htmlspecialchars($pkg['installments'] ?? 1) ?>">
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_savings" value="<?= htmlspecialchars($pkg['savings'] ?? '') ?>">
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_price" value="<?= htmlspecialchars($pkg['net_price'] ?? $pkg['package_price'] ?? $pkg['price_monthly'] ?? '') ?>">
                                 <div class="package-savings-header">
@@ -713,6 +726,17 @@ require_once 'includes/header.php';
                                             <div class="label">Savings</div>
                                             <div class="amount">$<?= number_format($pkg['savings'], 2) ?></div>
                                         </div>
+                                        <?php if (($pkg['installments'] ?? 1) > 1):
+                                            $inst_n = (int)$pkg['installments'];
+                                            $inst_net = (float)($pkg['net_price'] ?? $pkg['package_price']);
+                                            $inst_rest = round($inst_net / $inst_n, 2);
+                                            $inst_first = round($inst_net - $inst_rest * ($inst_n - 1), 2);
+                                        ?>
+                                        <div class="pricing-box">
+                                            <div class="label">Installments</div>
+                                            <div class="amount"><?= $inst_n ?> × ($<?= number_format($inst_first, 2) ?> + $<?= number_format($inst_rest, 2) ?>)</div>
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -1004,6 +1028,18 @@ require_once 'includes/header.php';
     let builderRates = null;
     let currentCalculation = null;
 
+    // Compute the installment split for a net price. First payment is charged
+    // at checkout; the remaining payments are set up in Keap. The first payment
+    // absorbs any rounding remainder so the installments sum exactly to net.
+    function installmentPlan(net) {
+        let count = parseInt(document.getElementById('builder-installments').value, 10);
+        if (!count || count < 1) count = 1;
+        if (count === 1) return { count: 1, first: net, rest: 0, remaining: 0 };
+        const rest = Math.round((net / count) * 100) / 100;
+        const first = Math.round((net - rest * (count - 1)) * 100) / 100;
+        return { count: count, first: first, rest: rest, remaining: +(net - first).toFixed(2) };
+    }
+
     // Initialize package builder on page load
     window.addEventListener('DOMContentLoaded', function() {
         loadCoaches();
@@ -1035,6 +1071,7 @@ require_once 'includes/header.php';
         const sessionsSelect = document.getElementById('builder-sessions');
         const billSelect = document.getElementById('builder-bill');
         const discountInput = document.getElementById('builder-discount');
+        const installmentsInput = document.getElementById('builder-installments');
         const addBtn = document.getElementById('add-package-btn');
 
         // Reset downstream controls
@@ -1043,6 +1080,7 @@ require_once 'includes/header.php';
         sessionsSelect.disabled = true;
         billSelect.disabled = true;
         discountInput.disabled = true;
+        installmentsInput.disabled = true;
         addBtn.disabled = true;
         document.getElementById('builder-preview').classList.remove('visible');
         builderRates = null;
@@ -1079,11 +1117,12 @@ require_once 'includes/header.php';
         const addBtn = document.getElementById('add-package-btn');
         const preview = document.getElementById('builder-preview');
 
-        // Enable sessions / tier / discount inputs once duration is selected
+        // Enable sessions / tier / discount / installments inputs once duration is selected
         if (duration) {
             document.getElementById('builder-sessions').disabled = false;
             document.getElementById('builder-bill').disabled = false;
             document.getElementById('builder-discount').disabled = false;
+            document.getElementById('builder-installments').disabled = false;
         }
 
         // Hide preview and disable button if not all required fields set
@@ -1113,6 +1152,11 @@ require_once 'includes/header.php';
                 document.getElementById('preview-net').textContent = `$${c.net_price.toFixed(2)}`;
                 document.getElementById('preview-savings').textContent = `$${c.savings.toFixed(2)} (${c.savings_percent}%)`;
 
+                const plan = installmentPlan(c.net_price);
+                document.getElementById('preview-installments').textContent = plan.count > 1
+                    ? `${plan.count} payments — $${plan.first.toFixed(2)} today, then $${plan.rest.toFixed(2)}`
+                    : 'Pay in full';
+
                 preview.classList.add('visible');
                 addBtn.disabled = false;
             }
@@ -1136,10 +1180,17 @@ require_once 'includes/header.php';
         const duration = document.getElementById('builder-duration').value;
         const c = currentCalculation;
         const n = supportPackageCount;
+        const plan = installmentPlan(c.net_price);
         const discountRow = c.discount_amount > 0
             ? `<div class="pricing-box discount">
                             <div class="label">Discount (${c.discount_percent}%)</div>
                             <div class="amount">-$${c.discount_amount.toFixed(2)}</div>
+                        </div>`
+            : '';
+        const installmentRow = plan.count > 1
+            ? `<div class="pricing-box">
+                            <div class="label">Installments</div>
+                            <div class="amount">${plan.count} × (${'$'}${plan.first.toFixed(2)} + ${'$'}${plan.rest.toFixed(2)})</div>
                         </div>`
             : '';
 
@@ -1156,6 +1207,7 @@ require_once 'includes/header.php';
                 <input type="hidden" name="support_package_${n}_discount_percent" value="${c.discount_percent}">
                 <input type="hidden" name="support_package_${n}_discount_amount" value="${c.discount_amount}">
                 <input type="hidden" name="support_package_${n}_net_price" value="${c.net_price}">
+                <input type="hidden" name="support_package_${n}_installments" value="${plan.count}">
                 <input type="hidden" name="support_package_${n}_savings" value="${c.savings}">
                 <input type="hidden" name="support_package_${n}_price" value="${c.net_price}">
                 <div class="package-savings-header">
@@ -1182,6 +1234,7 @@ require_once 'includes/header.php';
                             <div class="label">Savings</div>
                             <div class="amount">$${c.savings.toFixed(2)}</div>
                         </div>
+                        ${installmentRow}
                     </div>
                 </div>
             </div>
@@ -1199,6 +1252,8 @@ require_once 'includes/header.php';
         document.getElementById('builder-bill').disabled = true;
         document.getElementById('builder-discount').value = '';
         document.getElementById('builder-discount').disabled = true;
+        document.getElementById('builder-installments').value = '';
+        document.getElementById('builder-installments').disabled = true;
         document.getElementById('add-package-btn').disabled = true;
         document.getElementById('builder-preview').classList.remove('visible');
         currentCalculation = null;
