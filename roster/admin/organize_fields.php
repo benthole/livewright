@@ -93,7 +93,14 @@ $activeTab = $_POST['field_key'] ?? array_key_first($defs);
         .panel.active { display: block; }
         .groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
         .group { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; min-height: 120px; }
-        .group h3 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #6b7a89; }
+        .group-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .group h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #6b7a89; }
+        .add-divider { border: 1px dashed #cbd5e0; background: #fff; color: #718096; border-radius: 5px; font-size: 12px; padding: 3px 8px; cursor: pointer; }
+        .add-divider:hover { border-color: #17a2b8; color: #17a2b8; }
+        .divider-item { background: #eef2f6; color: #94a3b8; font-size: 12px; letter-spacing: .1em; justify-content: space-between; }
+        .divider-item .val { text-align: center; color: #94a3b8; }
+        .remove-divider { border: none; background: transparent; color: #a0aec0; font-size: 16px; line-height: 1; cursor: pointer; padding: 0 4px; }
+        .remove-divider:hover { color: #dc3545; }
         .list { min-height: 60px; display: flex; flex-direction: column; gap: 6px; }
         .item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; cursor: grab; }
         .item.hidden-val { opacity: .5; }
@@ -146,22 +153,29 @@ $activeTab = $_POST['field_key'] ?? array_key_first($defs);
                     <div class="groups">
                         <?php foreach ($groups as $gKey => $gLabel): ?>
                             <div class="group">
-                                <h3><?php echo htmlspecialchars($gLabel); ?></h3>
+                                <div class="group-head">
+                                    <h3><?php echo htmlspecialchars($gLabel); ?></h3>
+                                    <button type="button" class="add-divider" data-group="<?php echo htmlspecialchars($gKey); ?>" title="Add a divider line to this group">+ divider</button>
+                                </div>
                                 <div class="list" data-group="<?php echo htmlspecialchars($gKey); ?>" data-field="<?php echo htmlspecialchars($key); ?>">
                                     <?php
-                                    $any = false;
                                     foreach ($organized[$key] as $item):
                                         if ($item['group'] !== $gKey) continue;
-                                        $any = true;
+                                        if (!empty($item['divider'])):
                                     ?>
-                                        <div class="item <?php echo !empty($item['hidden']) ? 'hidden-val' : ''; ?>" data-value="<?php echo htmlspecialchars($item['value']); ?>">
+                                        <div class="item divider-item" data-divider="1">
+                                            <span class="handle">⠿</span>
+                                            <span class="val">────────── divider ──────────</span>
+                                            <button type="button" class="remove-divider" title="Remove divider">×</button>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="item <?php echo !empty($item['hidden']) ? 'hidden-val' : ''; ?>" data-divider="0" data-value="<?php echo htmlspecialchars($item['value']); ?>">
                                             <span class="handle">⠿</span>
                                             <span class="val"><?php echo htmlspecialchars($item['value']); ?></span>
                                             <label><input type="checkbox" class="hide-toggle" <?php echo !empty($item['hidden']) ? 'checked' : ''; ?>> Hide</label>
                                         </div>
-                                    <?php endforeach; ?>
+                                    <?php endif; endforeach; ?>
                                 </div>
-                                <?php if (!$any): ?><div class="empty-hint">Drag values here</div><?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -203,16 +217,35 @@ $activeTab = $_POST['field_key'] ?? array_key_first($defs);
                 }
             });
 
-            // Serialize DOM order + group + hidden into items_json on submit
+            // Add a divider to a group; remove a divider.
+            form.addEventListener('click', e => {
+                if (e.target.classList.contains('add-divider')) {
+                    const group = e.target.dataset.group;
+                    const list = form.querySelector('.list[data-group="' + group + '"]');
+                    const div = document.createElement('div');
+                    div.className = 'item divider-item';
+                    div.dataset.divider = '1';
+                    div.innerHTML = '<span class="handle">⠿</span>' +
+                        '<span class="val">────────── divider ──────────</span>' +
+                        '<button type="button" class="remove-divider" title="Remove divider">×</button>';
+                    list.appendChild(div);
+                } else if (e.target.classList.contains('remove-divider')) {
+                    e.target.closest('.item').remove();
+                }
+            });
+
+            // Serialize DOM order + group + hidden + divider into items_json on submit
             form.addEventListener('submit', () => {
                 const items = [];
                 form.querySelectorAll('.list').forEach(list => {
                     const group = list.dataset.group;
                     list.querySelectorAll('.item').forEach(item => {
+                        const isDivider = item.dataset.divider === '1';
                         items.push({
-                            value: item.dataset.value,
+                            value: isDivider ? '' : item.dataset.value,
                             group: group,
-                            hidden: item.querySelector('.hide-toggle').checked,
+                            hidden: isDivider ? false : item.querySelector('.hide-toggle').checked,
+                            divider: isDivider,
                         });
                     });
                 });

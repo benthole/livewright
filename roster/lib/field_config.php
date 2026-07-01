@@ -11,6 +11,19 @@
  * E-team role (73). Requires config.php and keap_api.php to be loaded.
  */
 
+// Divider items are stored as rows whose value starts with this prefix.
+// They render as non-selectable separator lines in the dropdowns.
+const FC_DIVIDER_PREFIX = '__divider__';
+
+function fc_is_divider($value) {
+    return is_string($value) && strpos($value, FC_DIVIDER_PREFIX) === 0;
+}
+
+// The label shown for a plain-line divider in the dropdowns.
+function fc_divider_label() {
+    return '──────────';
+}
+
 // Display order + labels for the groups (shared across all managed fields).
 function fc_groups() {
     return [
@@ -166,9 +179,8 @@ function fc_organized($conn, $fieldKey) {
     }
 
     $items = [];
-    $maxOrder = [];
-    foreach ($groups as $g => $_) $maxOrder[$g] = 0;
 
+    // Real values (from Keap/config/data), with stored or seed placement.
     foreach (fc_all_values($conn, $fieldKey) as $value) {
         if (isset($stored[$value])) {
             $item = $stored[$value] + ['value' => $value];
@@ -176,8 +188,20 @@ function fc_organized($conn, $fieldKey) {
             $g = $seedMap[$value] ?? 'active';
             $item = ['value' => $value, 'group' => $g, 'order' => 9999, 'hidden' => false];
         }
+        $item['divider'] = false;
         $items[] = $item;
-        $maxOrder[$item['group']] = max($maxOrder[$item['group']], $item['order']);
+    }
+
+    // Divider rows (stored only; not real values).
+    foreach ($stored as $val => $meta) {
+        if (!fc_is_divider($val)) continue;
+        $items[] = [
+            'value'   => $val,
+            'group'   => $meta['group'],
+            'order'   => $meta['order'],
+            'hidden'  => false,
+            'divider' => true,
+        ];
     }
 
     // Stable sort by group display order, then sort_order, then value.
@@ -212,9 +236,19 @@ function fc_save($conn, $fieldKey, $items) {
             VALUES (:k, :v, :g, :o, :h)");
 
         $perGroupOrder = [];
+        $dividerCounter = 0;
         foreach ($items as $item) {
-            $value = trim((string)($item['value'] ?? ''));
-            if ($value === '') continue;
+            $isDivider = !empty($item['divider']);
+            if ($isDivider) {
+                // Assign a unique token so multiple dividers don't collide on
+                // the (field_key, value) unique key.
+                $value = FC_DIVIDER_PREFIX . ':' . ($dividerCounter++);
+            } else {
+                $value = trim((string)($item['value'] ?? ''));
+                if ($value === '') continue;
+                // Guard: a real value must not spoof the divider token space.
+                if (fc_is_divider($value)) continue;
+            }
             $group = $item['group'] ?? 'active';
             if (!isset($groups[$group])) $group = 'active';
             $perGroupOrder[$group] = ($perGroupOrder[$group] ?? -1) + 1;
@@ -223,7 +257,7 @@ function fc_save($conn, $fieldKey, $items) {
                 'v' => $value,
                 'g' => $group,
                 'o' => $perGroupOrder[$group],
-                'h' => !empty($item['hidden']) ? 1 : 0,
+                'h' => (!$isDivider && !empty($item['hidden'])) ? 1 : 0,
             ]);
         }
         $conn->commit();

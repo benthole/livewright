@@ -1370,7 +1370,11 @@ function getCustomFieldById($customFields, $fieldId) {
                             <?php foreach ($cohortGroups as $groupLabel => $groupTeams): ?>
                             <optgroup label="<?php echo htmlspecialchars($groupLabel); ?>">
                                 <?php foreach ($groupTeams as $cohort): ?>
-                                <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
+                                    <?php if (fc_is_divider($cohort)): ?>
+                                    <option disabled><?php echo htmlspecialchars(fc_divider_label()); ?></option>
+                                    <?php else: ?>
+                                    <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
+                                    <?php endif; ?>
                                 <?php endforeach; ?>
                             </optgroup>
                             <?php endforeach; ?>
@@ -1454,10 +1458,14 @@ function getCustomFieldById($customFields, $fieldId) {
 
                     <div id="individualCoachCheckboxes" class="coach-list-container">
                         <?php foreach ($individualCoachValues as $coach): ?>
-                        <label class="coach-list-item">
-                            <input type="checkbox" name="individualCoaches[]" value="<?php echo htmlspecialchars($coach); ?>">
-                            <span class="coach-name"><?php echo htmlspecialchars($coach); ?></span>
-                        </label>
+                            <?php if (fc_is_divider($coach)): ?>
+                            <div class="coach-list-divider" style="text-align:center; color:#cbd5e0; font-size:12px; letter-spacing:.1em; padding:4px 0;"><?php echo htmlspecialchars(fc_divider_label()); ?></div>
+                            <?php else: ?>
+                            <label class="coach-list-item">
+                                <input type="checkbox" name="individualCoaches[]" value="<?php echo htmlspecialchars($coach); ?>">
+                                <span class="coach-name"><?php echo htmlspecialchars($coach); ?></span>
+                            </label>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </div>
                     <p style="font-size: 12px; color: #94a3b8; margin-top: 8px;">Select "Replace" then choose coaches to assign</p>
@@ -1469,7 +1477,11 @@ function getCustomFieldById($customFields, $fieldId) {
                         <option value="">Keep current assignment</option>
                         <option value="__CLEAR__">Clear assignment</option>
                         <?php foreach ($groupCoachValues as $coach): ?>
-                        <option value="<?php echo htmlspecialchars($coach); ?>"><?php echo htmlspecialchars($coach); ?></option>
+                            <?php if (fc_is_divider($coach)): ?>
+                            <option disabled><?php echo htmlspecialchars(fc_divider_label()); ?></option>
+                            <?php else: ?>
+                            <option value="<?php echo htmlspecialchars($coach); ?>"><?php echo htmlspecialchars($coach); ?></option>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </select>
                 </div>
