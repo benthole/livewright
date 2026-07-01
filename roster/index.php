@@ -3,6 +3,7 @@
 
 require_once('includes/auth.php');
 require_once('config.php');
+require_once('keap_api.php');
 
 // Require authentication
 require_auth();
@@ -11,6 +12,20 @@ require_auth();
 $current_user = get_logged_in_user();
 $user_can_edit = can_edit();
 $user_is_admin = is_admin();
+
+// Team dropdown options: pull the live Keap field options (cached) so teams
+// added in Keap appear and persist across reloads without editing config.php.
+// Any option not already grouped in $cohorts is shown under a "From Keap" group.
+$configuredCohorts = array_merge(
+    $cohorts['active'] ?? [],
+    $cohorts['functional'] ?? [],
+    $cohorts['inactive'] ?? []
+);
+$keapTeamOptions = function_exists('keap_get_custom_field_options_cached')
+    ? keap_get_custom_field_options_cached($cohort_field_id)
+    : [];
+$extraKeapTeams = array_values(array_diff($keapTeamOptions, $configuredCohorts));
+sort($extraKeapTeams);
 
 // Check if viewing dropped contacts
 $viewDropped = isset($_GET['dropped']) && $_GET['dropped'] === '1';
@@ -1353,6 +1368,13 @@ function getCustomFieldById($customFields, $fieldId) {
                                 <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
                                 <?php endforeach; ?>
                             </optgroup>
+                            <?php if (!empty($extraKeapTeams)): ?>
+                            <optgroup label="From Keap">
+                                <?php foreach ($extraKeapTeams as $cohort): ?>
+                                <option value="<?php echo htmlspecialchars($cohort); ?>"><?php echo htmlspecialchars($cohort); ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <?php endif; ?>
                         </select>
                         <button type="button" id="syncTeamsBtn" title="Sync team values from Keap" style="padding: 10px 14px; border: 1px solid #17a2b8; background: white; color: #17a2b8; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;" onmouseover="this.style.background='#17a2b8';this.style.color='white'" onmouseout="this.style.background='white';this.style.color='#17a2b8'">🔄 Sync</button>
                     </div>

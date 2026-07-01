@@ -35,6 +35,14 @@ if (isset($fieldOptions['error'])) {
     foreach ($fieldOptions as $label) {
         $teams[$label] = true;
     }
+    // Refresh the page-load cache (same key as keap_get_custom_field_options_cached)
+    // so the index.php dropdown reflects this sync immediately on next load.
+    if (is_file(__DIR__ . '/lib/keap_cache.php')) {
+        require_once(__DIR__ . '/lib/keap_cache.php');
+        if (function_exists('kcache_put')) {
+            kcache_put("cf_options_{$cohort_field_id}", $fieldOptions, 900);
+        }
+    }
 }
 
 // 2. Also include any team values present in local roster data (custom field 45),
