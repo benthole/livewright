@@ -224,11 +224,16 @@ if ($_POST) {
                 }
             }
 
+            // How coaching packages are presented on the PDP: optional add-ons
+            // (choose any) or mutually-exclusive options (choose one).
+            $coaching_packages_mode = ($_POST['coaching_packages_mode'] ?? 'addons') === 'choose_one'
+                ? 'choose_one' : 'addons';
+
             // Update contract with support packages JSON and bump modified timestamp
             // (explicit NOW() ensures updated_at moves even when no other column actually changed)
             $support_packages_json = !empty($support_packages) ? json_encode($support_packages) : null;
-            $stmt = $pdo->prepare("UPDATE contracts SET support_packages = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->execute([$support_packages_json, $contract_id]);
+            $stmt = $pdo->prepare("UPDATE contracts SET support_packages = ?, coaching_packages_mode = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$support_packages_json, $coaching_packages_mode, $contract_id]);
 
             $pdo->commit();
             $success = 'Personal Development Plan saved successfully';
@@ -559,8 +564,21 @@ require_once 'includes/header.php';
 
         <!-- Support Packages Section -->
         <div class="option-section support-packages-section">
-            <h3>Optional Support Packages</h3>
+            <h3>Coaching Packages</h3>
             <p class="section-description">Build coaching packages using the rate table. Pricing is auto-calculated with volume discounts.</p>
+
+            <?php $cp_mode = $contract['coaching_packages_mode'] ?? 'addons'; ?>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label>Present these packages as:</label>
+                <label style="font-weight:normal;display:block;margin:4px 0;">
+                    <input type="radio" name="coaching_packages_mode" value="addons" <?= $cp_mode !== 'choose_one' ? 'checked' : '' ?>>
+                    Optional add-ons — client can add any to their plan (default)
+                </label>
+                <label style="font-weight:normal;display:block;margin:4px 0;">
+                    <input type="radio" name="coaching_packages_mode" value="choose_one" <?= $cp_mode === 'choose_one' ? 'checked' : '' ?>>
+                    Options — client chooses ONE (side-by-side comparison; enables coaching-only checkout)
+                </label>
+            </div>
 
             <!-- Package Builder -->
             <div class="package-builder">

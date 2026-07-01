@@ -174,8 +174,11 @@ function pdp_keap_get_payment_session($contactId) {
 }
 
 // Keap product IDs for PDP orders
-define('KEAP_PDP_PRODUCT_ID', 99);           // Personal Development Plan
-define('KEAP_PDP_DEPOSIT_PRODUCT_ID', 97);   // Personal Development Plan (Deposit)
+define('KEAP_PDP_PRODUCT_ID', 99);              // Personal Development Plan
+define('KEAP_PDP_DEPOSIT_PRODUCT_ID', 97);      // Personal Development Plan (Deposit)
+define('KEAP_COACHING_PACKAGE_PRODUCT_ID', 99); // Coaching package (one-time). Reuses the
+                                                // PDP product until a dedicated Keap product
+                                                // exists; override here if one is created.
 
 /**
  * Create an order in Keap.
@@ -189,12 +192,15 @@ function pdp_keap_create_order($contactId, $orderTitle, $items) {
     $orderItems = [];
     foreach ($items as $item) {
         $isDeposit = !empty($item['is_deposit']);
+        // An explicit product_id on the item wins (e.g. one-time coaching packages);
+        // otherwise fall back to the deposit/full PDP product based on the deposit flag.
+        $productId = $item['product_id'] ?? ($isDeposit ? KEAP_PDP_DEPOSIT_PRODUCT_ID : KEAP_PDP_PRODUCT_ID);
         $orderItems[] = [
             'name' => $item['description'],
             'description' => $item['description'],
             'price' => (float)$item['price'],
             'quantity' => (int)($item['quantity'] ?? 1),
-            'product_id' => $isDeposit ? KEAP_PDP_DEPOSIT_PRODUCT_ID : KEAP_PDP_PRODUCT_ID,
+            'product_id' => $productId,
         ];
     }
 

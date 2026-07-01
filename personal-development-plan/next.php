@@ -17,6 +17,14 @@ $error = '';
 $contract = null;
 $selected_option = null;
 
+// A coaching package selection arrives as "pkg_<index>" (an index into the
+// contract's support_packages JSON), rather than a numeric pricing_options id.
+$package_index = null;
+if (is_string($payment_option_id) && preg_match('/^pkg_(\d+)$/', $payment_option_id, $m)) {
+    $package_index = (int)$m[1];
+}
+$is_package = ($package_index !== null);
+
 // Validate required fields
 if (empty($payment_option_id) || empty($contract_uid) || empty($first_name) || empty($last_name) || empty($email)) {
     $error = 'Missing required information.';
@@ -28,6 +36,26 @@ if (empty($payment_option_id) || empty($contract_uid) || empty($first_name) || e
 
     if (!$contract) {
         $error = 'Personal Development Plan not found.';
+    } elseif ($is_package) {
+        // Resolve the chosen coaching package from support_packages JSON.
+        $packages = !empty($contract['support_packages'])
+            ? (json_decode($contract['support_packages'], true) ?: [])
+            : [];
+        if (!isset($packages[$package_index])) {
+            $error = 'Invalid coaching package selected.';
+        } else {
+            $pkg = $packages[$package_index];
+            $net = (float)($pkg['net_price'] ?? $pkg['package_price'] ?? $pkg['price_monthly'] ?? 0);
+            // Build a synthetic "option" so the existing page rendering works unchanged.
+            $selected_option = [
+                'id' => null,
+                'description' => $pkg['description'] ?? $pkg['name'] ?? 'Coaching Package',
+                'sub_option_name' => 'Default',
+                'price' => $net,
+                'type' => 'OneTime',
+                'deposit_amount' => 0,
+            ];
+        }
     } else {
         // Get selected pricing option
         $stmt = $pdo->prepare("SELECT * FROM pricing_options WHERE id = ? AND contract_id = ? AND deleted_at IS NULL");
@@ -49,6 +77,7 @@ $type_labels = [
     'Yearly' => 'one-time payment for 12 months of coaching',
     'Monthly' => 'monthly for 12 months',
     'Quarterly' => 'quarterly over the next 12 months',
+    'OneTime' => 'one-time payment',
 ];
 $friendly_type = $type_labels[$plan_type] ?? strtolower($plan_type);
 
@@ -283,6 +312,7 @@ $initial_label  = $has_monthly_deposit ? 'Initial payment' : ($plan_type === 'Ye
     const CONFIG = {
         contractUid: '<?= addslashes($contract_uid) ?>',
         pricingOptionId: <?= (int)$payment_option_id ?>,
+        packageIndex: <?= $is_package ? (int)$package_index : 'null' ?>,
         firstName: '<?= addslashes($first_name) ?>',
         lastName: '<?= addslashes($last_name) ?>',
         email: '<?= addslashes($email) ?>',
@@ -399,11 +429,18 @@ $initial_label  = $has_monthly_deposit ? 'Initial payment' : ($plan_type === 'Ye
                 throw new Error('Please enter your card details');
             }
 
-            // Send charge request to our backend
-            const chargeResponse = await fetch('api/keap-charge.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+            // Send charge request to our backend. Coaching packages charge a
+            // one-time amount that the server re-derives from package_index
+            // (no client-supplied amount or pricing option is trusted).
+            const chargePayload = (CONFIG.packageIndex !== null)
+                ? {
+                    contract_uid: CONFIG.contractUid,
+                    package_index: CONFIG.packageIndex,
+                    contact_id: keapContactId,
+                    payment_method_id: paymentMethodId,
+                    plan_description: CONFIG.planDescription
+                }
+                : {
                     contract_uid: CONFIG.contractUid,
                     pricing_option_id: CONFIG.pricingOptionId,
                     contact_id: keapContactId,
@@ -411,7 +448,11 @@ $initial_label  = $has_monthly_deposit ? 'Initial payment' : ($plan_type === 'Ye
                     amount: getChargeAmount(),
                     is_deposit: CONFIG.isMonthlyDeposit,
                     plan_description: CONFIG.planDescription
-                })
+                };
+            const chargeResponse = await fetch('api/keap-charge.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(chargePayload)
             });
 
             const chargeData = await chargeResponse.json();
