@@ -96,12 +96,25 @@ $has_monthly_deposit = ($plan_type === 'Monthly' && $plan_deposit > 0);
 $initial_amount = $has_monthly_deposit ? $plan_deposit : $plan_price;
 $initial_label  = $has_monthly_deposit ? 'Initial payment' : ($plan_type === 'Yearly' ? 'Pay in Full' : 'First payment');
 
-// Coaching package paid in installments: charge the first installment today;
-// the remaining installments are set up in Keap (like the Monthly plan).
-$has_installments = ($is_package && !empty($package_plan) && $package_plan['count'] > 1);
+// Coaching package / term configured for more than one installment: the client
+// chooses at checkout to pay in full or in installments. The first installment is
+// charged today; the rest are set up in Keap (like the Monthly plan). Terms default
+// to paying in full; coaching packages keep their installments-first default.
+$offer_payment_toggle = ($is_package && !empty($package_plan) && $package_plan['count'] > 1);
+$is_term = ($is_package && !empty($pkg['is_term']));
+$plan_full  = ($is_package && !empty($package_plan)) ? pdp_installment_plan($net, 1) : null;
+$plan_split = $offer_payment_toggle ? $package_plan : null;
+$default_choice = ($offer_payment_toggle && !$is_term) ? 'installments' : 'full';
+
+// Amount + label shown today for the default choice.
+$has_installments = ($offer_payment_toggle && $default_choice === 'installments');
 if ($has_installments) {
-    $initial_amount = $package_plan['first'];
-    $initial_label = 'Payment 1 of ' . $package_plan['count'];
+    $initial_amount = $plan_split['first'];
+    $initial_label = 'Payment 1 of ' . $plan_split['count'];
+} elseif ($offer_payment_toggle) {
+    // Toggle offered but pay-in-full is the default.
+    $initial_amount = $plan_full['first'];
+    $initial_label = 'Pay in full';
 }
 ?>
 <!DOCTYPE html>
@@ -246,6 +259,28 @@ if ($has_installments) {
                 <div class="payment-section" id="paymentSection">
                     <h3>Payment</h3>
 
+                    <?php if ($offer_payment_toggle): ?>
+                    <div class="payment-toggle">
+                        <h3>Choose how to pay</h3>
+                        <label class="toggle-option<?= $default_choice === 'full' ? ' active' : '' ?>" data-choice="full">
+                            <input type="radio" name="payment_choice" value="full" <?= $default_choice === 'full' ? 'checked' : '' ?> onchange="applyPaymentChoice('full')">
+                            <div class="option-details">
+                                <div class="option-label">Pay in full</div>
+                                <div class="option-sublabel">One payment today</div>
+                            </div>
+                            <div class="option-price">$<?= number_format($plan_full['first'], 2) ?></div>
+                        </label>
+                        <label class="toggle-option<?= $default_choice === 'installments' ? ' active' : '' ?>" data-choice="installments">
+                            <input type="radio" name="payment_choice" value="installments" <?= $default_choice === 'installments' ? 'checked' : '' ?> onchange="applyPaymentChoice('installments')">
+                            <div class="option-details">
+                                <div class="option-label"><?= $plan_split['count'] ?> payments</div>
+                                <div class="option-sublabel">$<?= number_format($plan_split['first'], 2) ?> today, then <?= $plan_split['count'] - 1 ?> × $<?= number_format($plan_split['rest'], 2) ?> (set up in Keap)</div>
+                            </div>
+                            <div class="option-price">$<?= number_format($plan_split['first'], 2) ?> today</div>
+                        </label>
+                    </div>
+                    <?php endif; ?>
+
                     <div class="payment-summary" id="paymentSummary">
                         <div class="line-item">
                             <span class="label" id="summaryLabel"><?= htmlspecialchars($initial_label) ?></span>
@@ -256,13 +291,15 @@ if ($has_installments) {
                                 <span class="label">Then $<?= number_format($plan_price, 2) ?>/month for 12 months</span>
                                 <span class="amount">starting next billing cycle</span>
                             </div>
-                        <?php elseif ($has_installments): ?>
-                            <div class="line-item recurring">
-                                <span class="label">Then <?= $package_plan['count'] - 1 ?> × $<?= number_format($package_plan['rest'], 2) ?> (<?= number_format($package_plan['remaining'], 2) ?> remaining)</span>
-                                <span class="amount">billed on a schedule</span>
+                        <?php elseif ($offer_payment_toggle): ?>
+                            <div id="installmentDetail" style="<?= $default_choice === 'installments' ? '' : 'display:none;' ?>">
+                                <div class="line-item recurring">
+                                    <span class="label">Then <?= $plan_split['count'] - 1 ?> × $<?= number_format($plan_split['rest'], 2) ?> (<?= number_format($plan_split['remaining'], 2) ?> remaining)</span>
+                                    <span class="amount">set up in Keap</span>
+                                </div>
                             </div>
                             <div class="line-item">
-                                <span class="label">Package total</span>
+                                <span class="label"><?= $is_term ? 'Term total' : 'Package total' ?></span>
                                 <span class="amount">$<?= number_format($plan_price, 2) ?></span>
                             </div>
                         <?php endif; ?>
@@ -341,8 +378,35 @@ if ($has_installments) {
         planPrice: <?= $plan_price ?>,
         initialAmount: <?= $initial_amount ?>,
         isMonthlyDeposit: <?= $has_monthly_deposit ? 'true' : 'false' ?>,
+        offerPaymentToggle: <?= $offer_payment_toggle ? 'true' : 'false' ?>,
+        paymentChoice: '<?= $default_choice ?>',
+        planFull: <?= $offer_payment_toggle ? json_encode($plan_full) : 'null' ?>,
+        planSplit: <?= $offer_payment_toggle ? json_encode($plan_split) : 'null' ?>,
         planDescription: '<?= addslashes($selected_option['description'] ?? '') ?>'
     };
+
+    // Client's pay-in-full vs installments choice (only meaningful when the toggle
+    // is shown). The server re-derives the actual charge amount from this flag.
+    let selectedPaymentChoice = CONFIG.paymentChoice;
+
+    // Update the payment summary + pay button when the client switches how to pay.
+    function applyPaymentChoice(choice) {
+        if (!CONFIG.offerPaymentToggle) return;
+        selectedPaymentChoice = choice;
+        const plan = (choice === 'installments') ? CONFIG.planSplit : CONFIG.planFull;
+        const today = plan.first;
+        const label = (choice === 'installments') ? ('Payment 1 of ' + plan.count) : 'Pay in full';
+        document.getElementById('summaryLabel').textContent = label;
+        document.getElementById('summaryAmount').textContent = '$' + today.toFixed(2);
+        document.getElementById('summaryTotal').textContent = '$' + today.toFixed(2);
+        const detail = document.getElementById('installmentDetail');
+        if (detail) detail.style.display = (choice === 'installments') ? '' : 'none';
+        const btnText = document.getElementById('payBtnText');
+        if (btnText) btnText.textContent = 'Pay $' + today.toFixed(2) + ' & Sign Plan';
+        document.querySelectorAll('.toggle-option').forEach(function (el) {
+            el.classList.toggle('active', el.getAttribute('data-choice') === choice);
+        });
+    }
 
     let sessionKey = null;
     let keapContactId = null;
@@ -460,6 +524,7 @@ if ($has_installments) {
                     package_index: CONFIG.packageIndex,
                     contact_id: keapContactId,
                     payment_method_id: paymentMethodId,
+                    installment_choice: selectedPaymentChoice,
                     plan_description: CONFIG.planDescription
                 }
                 : {

@@ -222,6 +222,20 @@ if ($_POST) {
                         $package['installments'] = ($inst >= 1 && $inst <= 12) ? $inst : 1;
                         // Keep the checkout price aligned with the net price.
                         $package['price_monthly'] = $package['net_price'];
+                    } elseif (!empty($_POST["support_package_{$p}_is_term"])) {
+                        // Short-term ("1 Quarter" / "2 Quarters") entry: manually priced,
+                        // not driven by the coaching rate table. The manual price is the
+                        // net price; installments let the client split it at checkout.
+                        $package['is_term'] = true;
+                        $package['months'] = (int)($_POST["support_package_{$p}_months"] ?? 0);
+                        $net = $_POST["support_package_{$p}_net_price"] ?? '';
+                        $package['net_price'] = ($net !== '')
+                            ? floatval($net)
+                            : $package['price_monthly'];
+                        $inst = (int)($_POST["support_package_{$p}_installments"] ?? 1);
+                        $package['installments'] = ($inst >= 1 && $inst <= 12) ? $inst : 1;
+                        // Keep the checkout price aligned with the net price.
+                        $package['price_monthly'] = $package['net_price'];
                     }
 
                     $support_packages[] = $package;
@@ -666,6 +680,43 @@ require_once 'includes/header.php';
                 </div>
             </div>
 
+            <!-- Short-Term / Term Pricing Builder -->
+            <div class="package-builder term-builder">
+                <h4>Short-Term / Term Pricing</h4>
+                <p class="section-description" style="margin:0 0 8px;font-size:0.82em;">
+                    Sell a fixed short term (e.g. 1 Quarter / 2 Quarters) at a manually-set price instead of the 12-month plan. Set the mode to <strong>"Options — client chooses ONE"</strong> above and leave the annual pricing options empty. When <strong>Installments</strong> is more than 1, the client can split the price at checkout (first payment now, the rest set up in Keap).
+                </p>
+                <div class="builder-row">
+                    <div class="form-group">
+                        <label>Label:</label>
+                        <input type="text" id="term-label" placeholder="e.g. 1 Quarter (3 months)">
+                    </div>
+                    <div class="form-group">
+                        <label>Months:</label>
+                        <select id="term-months">
+                            <option value="3">3 (1 quarter)</option>
+                            <option value="6">6 (2 quarters)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Price:</label>
+                        <input type="number" id="term-price" min="0" step="0.01" placeholder="$0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Installments:</label>
+                        <input type="number" id="term-installments" min="1" max="12" step="1" placeholder="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Description:</label>
+                        <input type="text" id="term-description" placeholder="Optional short description">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="button" class="add-package-btn" onclick="addTermPackage()">Add Term</button>
+                    </div>
+                </div>
+            </div>
+
             <div id="support-packages-container">
                 <?php
                 $support_packages = [];
@@ -681,7 +732,46 @@ require_once 'includes/header.php';
                         // Check if this is a "built" package with full pricing info
                         $has_savings = isset($pkg['regular_price']) && isset($pkg['package_price']) && isset($pkg['savings']);
                         ?>
-                        <?php if ($has_savings): ?>
+                        <?php if (!empty($pkg['is_term'])):
+                            $t_net = (float)($pkg['net_price'] ?? $pkg['price_monthly'] ?? 0);
+                            $t_inst = (int)($pkg['installments'] ?? 1);
+                        ?>
+                            <div class="package-with-savings">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_name" value="<?= htmlspecialchars($pkg['name'] ?? '') ?>">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_description" value="<?= htmlspecialchars($pkg['description'] ?? '') ?>">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_is_term" value="1">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_months" value="<?= htmlspecialchars($pkg['months'] ?? '') ?>">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_net_price" value="<?= htmlspecialchars($t_net) ?>">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_installments" value="<?= $t_inst ?>">
+                                <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_price" value="<?= htmlspecialchars($t_net) ?>">
+                                <div class="package-savings-header">
+                                    <span class="name"><?= htmlspecialchars($pkg['name']) ?></span>
+                                    <button type="button" class="remove-btn" onclick="removePackageWithSavings(this)">Remove</button>
+                                </div>
+                                <div class="package-savings-body">
+                                    <?php if (!empty($pkg['description'])): ?><div class="description"><?= htmlspecialchars($pkg['description']) ?></div><?php endif; ?>
+                                    <div class="package-pricing-display">
+                                        <div class="pricing-box package">
+                                            <div class="label">Term</div>
+                                            <div class="amount"><?= (int)($pkg['months'] ?? 0) ?> months</div>
+                                        </div>
+                                        <div class="pricing-box package">
+                                            <div class="label">Price</div>
+                                            <div class="amount">$<?= number_format($t_net, 2) ?></div>
+                                        </div>
+                                        <?php if ($t_inst > 1):
+                                            $ti_rest = round($t_net / $t_inst, 2);
+                                            $ti_first = round($t_net - $ti_rest * ($t_inst - 1), 2);
+                                        ?>
+                                        <div class="pricing-box">
+                                            <div class="label">Installments</div>
+                                            <div class="amount"><?= $t_inst ?> × ($<?= number_format($ti_first, 2) ?> + $<?= number_format($ti_rest, 2) ?>)</div>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php elseif ($has_savings): ?>
                             <div class="package-with-savings">
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_name" value="<?= htmlspecialchars($pkg['name'] ?? '') ?>">
                                 <input type="hidden" name="support_package_<?= $pkg_index + 1 ?>_description" value="<?= htmlspecialchars($pkg['description'] ?? '') ?>">
@@ -1257,6 +1347,82 @@ require_once 'includes/header.php';
         document.getElementById('add-package-btn').disabled = true;
         document.getElementById('builder-preview').classList.remove('visible');
         currentCalculation = null;
+    }
+
+    // Add a short-term ("1 Quarter" / "2 Quarters") entry — manually priced,
+    // stored as a choose-one package with an is_term marker.
+    function addTermPackage() {
+        const label = document.getElementById('term-label').value.trim();
+        const months = parseInt(document.getElementById('term-months').value, 10) || 0;
+        const price = parseFloat(document.getElementById('term-price').value);
+        const description = document.getElementById('term-description').value.trim();
+        let inst = parseInt(document.getElementById('term-installments').value, 10);
+        if (!inst || inst < 1) inst = 1;
+        if (inst > 12) inst = 12;
+
+        if (!label) { alert('Enter a label for the term (e.g. "1 Quarter (3 months)").'); return; }
+        if (!price || price <= 0) { alert('Enter a price for the term.'); return; }
+
+        const container = document.getElementById('support-packages-container');
+        supportPackageCount++;
+        const n = supportPackageCount;
+
+        const noPackagesMsg = container.querySelector('.no-packages-message');
+        if (noPackagesMsg) noPackagesMsg.remove();
+
+        // Installment split (first payment absorbs rounding), matching the server.
+        let installmentRow = '';
+        if (inst > 1) {
+            const rest = Math.round((price / inst) * 100) / 100;
+            const first = Math.round((price - rest * (inst - 1)) * 100) / 100;
+            installmentRow = `<div class="pricing-box">
+                            <div class="label">Installments</div>
+                            <div class="amount">${inst} × (${'$'}${first.toFixed(2)} + ${'$'}${rest.toFixed(2)})</div>
+                        </div>`;
+        }
+        const descRow = description ? `<div class="description">${description}</div>` : '';
+
+        const packageHtml = `
+            <div class="package-with-savings">
+                <input type="hidden" name="support_package_${n}_name" value="${label.replace(/"/g, '&quot;')}">
+                <input type="hidden" name="support_package_${n}_description" value="${description.replace(/"/g, '&quot;')}">
+                <input type="hidden" name="support_package_${n}_is_term" value="1">
+                <input type="hidden" name="support_package_${n}_months" value="${months}">
+                <input type="hidden" name="support_package_${n}_net_price" value="${price}">
+                <input type="hidden" name="support_package_${n}_installments" value="${inst}">
+                <input type="hidden" name="support_package_${n}_price" value="${price}">
+                <div class="package-savings-header">
+                    <span class="name">${label.replace(/</g, '&lt;')}</span>
+                    <button type="button" class="remove-btn" onclick="removePackageWithSavings(this)">Remove</button>
+                </div>
+                <div class="package-savings-body">
+                    ${descRow}
+                    <div class="package-pricing-display">
+                        <div class="pricing-box package">
+                            <div class="label">Term</div>
+                            <div class="amount">${months} months</div>
+                        </div>
+                        <div class="pricing-box package">
+                            <div class="label">Price</div>
+                            <div class="amount">$${price.toFixed(2)}</div>
+                        </div>
+                        ${installmentRow}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', packageHtml);
+
+        // Reset the term builder inputs
+        document.getElementById('term-label').value = '';
+        document.getElementById('term-price').value = '';
+        document.getElementById('term-installments').value = '';
+        document.getElementById('term-description').value = '';
+
+        // Terms are mutually exclusive — nudge the mode to choose-one.
+        const chooseOne = document.querySelector('input[name="coaching_packages_mode"][value="choose_one"]');
+        if (chooseOne) chooseOne.checked = true;
     }
 
     // Remove package with savings display

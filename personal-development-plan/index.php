@@ -577,8 +577,18 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                     // $support_packages and $coaching_choose_one were computed above the options block.
                     if (!empty($support_packages)):
                     ?>
+                        <?php
+                        // If every choose-one option is a short term, present it as a term
+                        // selection rather than a coaching-package selection.
+                        $all_terms = $coaching_choose_one
+                            && count($support_packages) > 0
+                            && count(array_filter($support_packages, fn($p) => !empty($p['is_term']))) === count($support_packages);
+                        ?>
                         <div class="support-packages-public<?= $coaching_choose_one ? ' choose-one' : '' ?>">
-                            <?php if ($coaching_choose_one): ?>
+                            <?php if ($all_terms): ?>
+                                <h3>Choose Your Term</h3>
+                                <p class="support-intro">Select the term that fits you best:</p>
+                            <?php elseif ($coaching_choose_one): ?>
                                 <h3>Choose Your Coaching Package</h3>
                                 <p class="support-intro">Select the coaching package that fits you best:</p>
                             <?php else: ?>
@@ -587,6 +597,7 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                             <?php endif; ?>
                             <div class="support-packages-grid">
                                 <?php foreach ($support_packages as $pkg_i => $pkg):
+                                    $is_term = !empty($pkg['is_term']);
                                     $has_savings = isset($pkg['regular_price']) && isset($pkg['package_price']) && isset($pkg['savings']) && $pkg['savings'] > 0;
                                     // Net price is what the client pays: package price less any manual discount.
                                     $net_price = $pkg['net_price'] ?? $pkg['package_price'] ?? $pkg['price_monthly'] ?? 0;
@@ -626,13 +637,18 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                                         <?php else: ?>
                                             <div class="support-package-price">
                                                 <span class="price-amount">$<?= number_format($pkg['price_monthly'], 2) ?></span>
+                                                <?php if ($is_term && !empty($pkg['months'])): ?>
+                                                    <span class="price-term-note"> for <?= (int)$pkg['months'] ?> months</span>
+                                                <?php endif; ?>
                                             </div>
                                         <?php endif; ?>
 
                                         <?php
                                         // Installment breakdown: first payment charged at checkout, rest set up in Keap.
+                                        // For terms the pay-in-full vs installments choice is made at checkout,
+                                        // so we only show an informational line for coaching packages here.
                                         $inst_count = (int)($pkg['installments'] ?? 1);
-                                        if ($coaching_choose_one && $inst_count > 1):
+                                        if ($coaching_choose_one && !$is_term && $inst_count > 1):
                                             $inst_rest = round($checkout_price / $inst_count, 2);
                                             $inst_first = round($checkout_price - $inst_rest * ($inst_count - 1), 2);
                                         ?>

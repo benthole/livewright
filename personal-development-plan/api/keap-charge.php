@@ -39,6 +39,10 @@ $plan_description = trim($input['plan_description'] ?? '');
 // JSON; the amount is re-derived server-side (never trusted from the request).
 $package_index = isset($input['package_index']) ? (int)$input['package_index'] : null;
 $is_package = ($package_index !== null && $package_index >= 0);
+// For a package/term the client may choose to pay in full or in installments.
+// Only the binary choice is trusted from the request; the installment COUNT is
+// always read from the stored package below (never from the request).
+$installment_choice = ($input['installment_choice'] ?? 'full') === 'installments' ? 'installments' : 'full';
 $is_deposit = $is_package ? false : (bool)($input['is_deposit'] ?? false);
 // For non-package charges the amount still comes from the request (existing behaviour);
 // for package charges it is overwritten from the DB below.
@@ -92,7 +96,11 @@ try {
         }
         // Installments: charge only the first installment now; the rest are set up
         // in Keap. The split is derived server-side (never trusted from the request).
-        $package_plan = pdp_installment_plan($package_net, $package['installments'] ?? 1);
+        // Pay-in-full forces a single installment; "installments" uses the count
+        // stored on the package (a client can never inflate the number of payments).
+        $package_installments = (int)($package['installments'] ?? 1);
+        $count = ($installment_choice === 'installments') ? $package_installments : 1;
+        $package_plan = pdp_installment_plan($package_net, $count);
         $amount = $package_plan['first'];
     } else {
         // Get pricing option
