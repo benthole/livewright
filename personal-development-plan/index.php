@@ -120,6 +120,10 @@ if ($skin === 'wright' && $contract && !empty($options)) {
         /* Support Packages Public Display */
         .support-packages-public { background: #f8f9fa; padding: 25px; border-radius: 4px; margin-top: 30px; border-left: 4px solid #17a2b8; }
         .support-packages-public h3 { color: #17a2b8; margin-top: 0; margin-bottom: 10px; }
+        .choose-package-btn { width: 100%; margin-top: 12px; padding: 12px; background: #005FA3; color: #fff; border: none; border-radius: 4px; font-size: 1em; font-weight: bold; cursor: pointer; }
+        .choose-package-btn:hover { background: #004a80; }
+        .support-package-card.selected { border: 2px solid #005FA3; box-shadow: 0 0 0 3px rgba(0,95,163,0.15); }
+        .support-package-card.selected .choose-package-btn { background: #28a745; }
         .support-intro { color: #666; margin-bottom: 20px; }
         .support-packages-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .support-package-card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; text-align: center; transition: all 0.3s ease; }
@@ -356,9 +360,20 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                     </div>
                 <?php endif; ?>
                 
-                <?php if (!empty($options)): ?>
+                <?php
+                // Coaching packages can be presented as mutually-exclusive options
+                // ("choose one") that the client selects and pays directly — this also
+                // lets a coaching-only plan (no pricing options) reach checkout.
+                $support_packages = [];
+                if (!empty($contract['support_packages'])) {
+                    $support_packages = json_decode($contract['support_packages'], true) ?: [];
+                }
+                $coaching_choose_one = (($contract['coaching_packages_mode'] ?? 'addons') === 'choose_one') && !empty($support_packages);
+                ?>
+                <?php if (!empty($options) || $coaching_choose_one): ?>
+                    <?php if (!empty($options)): ?>
                     <h3>Available Options</h3>
-                    
+
                     <?php foreach ($options as $option_number => $sub_options): ?>
                         <?php
                         // Get the description from the first sub-option
@@ -556,21 +571,38 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                             </div>
                         </div>
                     <?php endforeach; ?>
+                    <?php endif; // end options list (only rendered when pricing options exist) ?>
 
                     <?php
-                    // Display Support Packages if available
-                    $support_packages = [];
-                    if (!empty($contract['support_packages'])) {
-                        $support_packages = json_decode($contract['support_packages'], true) ?: [];
-                    }
+                    // $support_packages and $coaching_choose_one were computed above the options block.
                     if (!empty($support_packages)):
                     ?>
-                        <div class="support-packages-public">
-                            <h3>Optional Support Add-Ons</h3>
-                            <p class="support-intro">Enhance your plan with optional coaching packages:</p>
+                        <?php
+                        // If every choose-one option is a short term, present it as a term
+                        // selection rather than a coaching-package selection.
+                        $all_terms = $coaching_choose_one
+                            && count($support_packages) > 0
+                            && count(array_filter($support_packages, fn($p) => !empty($p['is_term']))) === count($support_packages);
+                        ?>
+                        <div class="support-packages-public<?= $coaching_choose_one ? ' choose-one' : '' ?>">
+                            <?php if ($all_terms): ?>
+                                <h3>Choose Your Term</h3>
+                                <p class="support-intro">Select the term that fits you best:</p>
+                            <?php elseif ($coaching_choose_one): ?>
+                                <h3>Choose Your Coaching Package</h3>
+                                <p class="support-intro">Select the coaching package that fits you best:</p>
+                            <?php else: ?>
+                                <h3>Optional Support Add-Ons</h3>
+                                <p class="support-intro">Enhance your plan with optional coaching packages:</p>
+                            <?php endif; ?>
                             <div class="support-packages-grid">
-                                <?php foreach ($support_packages as $pkg):
+                                <?php foreach ($support_packages as $pkg_i => $pkg):
+                                    $is_term = !empty($pkg['is_term']);
                                     $has_savings = isset($pkg['regular_price']) && isset($pkg['package_price']) && isset($pkg['savings']) && $pkg['savings'] > 0;
+                                    // Net price is what the client pays: package price less any manual discount.
+                                    $net_price = $pkg['net_price'] ?? $pkg['package_price'] ?? $pkg['price_monthly'] ?? 0;
+                                    $has_discount = $has_savings && !empty($pkg['discount_amount']);
+                                    $checkout_price = $has_savings ? $net_price : ($pkg['price_monthly'] ?? 0);
                                 ?>
                                     <div class="support-package-card <?= $has_savings ? 'has-savings' : '' ?>">
                                         <div class="support-package-name">
@@ -587,21 +619,56 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                                                     <span class="label">Regular Price:</span>
                                                     <span class="value">$<?= number_format($pkg['regular_price'], 2) ?></span>
                                                 </div>
+                                                <?php if ($has_discount): ?>
+                                                <div class="pricing-row package">
+                                                    <span class="label">Package Price:</span>
+                                                    <span class="value">$<?= number_format($pkg['package_price'], 2) ?></span>
+                                                </div>
+                                                <div class="pricing-row discount">
+                                                    <span class="label">Discount (<?= rtrim(rtrim(number_format($pkg['discount_percent'] ?? 0, 1), '0'), '.') ?>%):</span>
+                                                    <span class="value">-$<?= number_format($pkg['discount_amount'], 2) ?></span>
+                                                </div>
+                                                <?php endif; ?>
                                                 <div class="pricing-row package">
                                                     <span class="label">Your Price:</span>
-                                                    <span class="value">$<?= number_format($pkg['package_price'], 2) ?></span>
+                                                    <span class="value">$<?= number_format($net_price, 2) ?></span>
                                                 </div>
                                             </div>
                                         <?php else: ?>
                                             <div class="support-package-price">
                                                 <span class="price-amount">$<?= number_format($pkg['price_monthly'], 2) ?></span>
+                                                <?php if ($is_term && !empty($pkg['months'])): ?>
+                                                    <span class="price-term-note"> for <?= (int)$pkg['months'] ?> months</span>
+                                                <?php endif; ?>
                                             </div>
                                         <?php endif; ?>
 
-                                        <label class="support-package-checkbox">
-                                            <input type="checkbox" name="support_packages[]" value="<?= htmlspecialchars($pkg['name']) ?>" data-price="<?= $has_savings ? $pkg['package_price'] : $pkg['price_monthly'] ?>">
-                                            Add to my plan
-                                        </label>
+                                        <?php
+                                        // Installment breakdown: first payment charged at checkout, rest set up in Keap.
+                                        // For terms the pay-in-full vs installments choice is made at checkout,
+                                        // so we only show an informational line for coaching packages here.
+                                        $inst_count = (int)($pkg['installments'] ?? 1);
+                                        if ($coaching_choose_one && !$is_term && $inst_count > 1):
+                                            $inst_rest = round($checkout_price / $inst_count, 2);
+                                            $inst_first = round($checkout_price - $inst_rest * ($inst_count - 1), 2);
+                                        ?>
+                                            <div class="pricing-row" style="border-top:1px dashed #ccc;margin-top:6px;padding-top:6px;">
+                                                <span class="label">Or <?= $inst_count ?> payments:</span>
+                                                <span class="value">$<?= number_format($inst_first, 2) ?> today, then <?= $inst_count - 1 ?> × $<?= number_format($inst_rest, 2) ?></span>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <?php if ($coaching_choose_one): ?>
+                                            <button type="button" class="choose-package-btn" data-pkg-index="<?= (int)$pkg_i ?>"
+                                                onclick="selectPackage(<?= (int)$pkg_i ?>, '<?= htmlspecialchars(addslashes($pkg['name']), ENT_QUOTES) ?>', <?= (float)$checkout_price ?>)">
+                                                Choose this package
+                                            </button>
+                                        <?php else: ?>
+                                            <label class="support-package-checkbox">
+                                                <input type="checkbox" name="support_packages[]" value="<?= htmlspecialchars($pkg['name']) ?>" data-price="<?= $checkout_price ?>">
+                                                Add to my plan
+                                            </label>
+                                        <?php endif; ?>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
@@ -738,6 +805,40 @@ if ($skin === 'wright' && $contract && !empty($options)) {
         updateCart();
     }
 
+    // Select a coaching package as the primary (choose-one) selection.
+    // Sets payment_option to "pkg_<index>" so checkout charges this package.
+    function selectPackage(index, name, price) {
+        // Clear any pricing-tier selection styling
+        document.querySelectorAll('.pricing-tier').forEach(tier => tier.classList.remove('selected'));
+        // Single-select among the coaching package cards
+        document.querySelectorAll('.support-packages-public.choose-one .support-package-card').forEach(card => card.classList.remove('selected'));
+        const btn = document.querySelector(`.choose-package-btn[data-pkg-index="${index}"]`);
+        if (btn) {
+            const card = btn.closest('.support-package-card');
+            if (card) card.classList.add('selected');
+            btn.textContent = '✓ Selected';
+        }
+        // Reset the label on the other buttons
+        document.querySelectorAll('.choose-package-btn').forEach(b => {
+            if (b !== btn) b.textContent = 'Choose this package';
+        });
+
+        selectedOptionId = 'pkg_' + index;
+        document.getElementById('payment_option').value = 'pkg_' + index;
+
+        selectedOption = { id: 'pkg_' + index, name: name, price: parseFloat(price), type: 'OneTime' };
+
+        document.getElementById('form-title').textContent = 'Your Selection:';
+        document.getElementById('selected-option-name').textContent = name;
+        document.getElementById('selected-price').textContent = parseFloat(price).toFixed(2);
+        document.getElementById('selected-type').textContent = 'one-time payment';
+        document.getElementById('selected-option-display').style.display = 'block';
+        document.getElementById('continue-btn').disabled = false;
+        document.getElementById('selection-error').style.display = 'none';
+
+        updateCart();
+    }
+
     function updateCart() {
         let itemCount = 0;
         let total = 0;
@@ -750,7 +851,7 @@ if ($skin === 'wright' && $contract && !empty($options)) {
             cartHTML += `
                 <div class="cart-item">
                     <div class="cart-item-name">${selectedOption.name}</div>
-                    <div class="cart-item-price">$${selectedOption.price.toFixed(2)} <span class="cart-item-type">${{'Yearly':'one-time','Monthly':'monthly for 12 mo','Quarterly':'quarterly for 12 mo'}[selectedOption.type] || selectedOption.type.toLowerCase()}</span></div>
+                    <div class="cart-item-price">$${selectedOption.price.toFixed(2)} <span class="cart-item-type">${{'Yearly':'one-time','Monthly':'monthly for 12 mo','Quarterly':'quarterly for 12 mo','OneTime':'one-time'}[selectedOption.type] || selectedOption.type.toLowerCase()}</span></div>
                 </div>
             `;
         }

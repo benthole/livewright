@@ -27,6 +27,14 @@ header('Content-Type: application/json');
 $coach = $_GET['coach'] ?? '';
 $duration = (int)($_GET['duration'] ?? 0);
 $sessions = (int)($_GET['sessions'] ?? 0);
+// Optional: bill at a specific package tier (flat), independent of delivered sessions.
+// e.g. deliver 7 sessions (every 3 weeks) but bill the flat 5-session package.
+$bill_sessions = (int)($_GET['bill_sessions'] ?? 0);
+if ($bill_sessions <= 0) $bill_sessions = $sessions;
+// Optional: manual discount percentage applied on top of volume pricing (e.g. 20 = 20% off).
+$discount_percent = (float)($_GET['discount'] ?? 0);
+if ($discount_percent < 0) $discount_percent = 0;
+if ($discount_percent > 100) $discount_percent = 100;
 
 // If no coach specified, return list of all coaches
 if (empty($coach)) {
@@ -77,10 +85,11 @@ $response = [
 
 // If duration and sessions specified, calculate package pricing
 if ($duration > 0 && $sessions > 0) {
-    // Find the appropriate tier (use the highest tier that doesn't exceed sessions)
+    // The billed tier is chosen from bill_sessions (defaults to delivered sessions),
+    // so you can, e.g., deliver 7 sessions but bill the flat 5-session package price point.
     $applicable_tier = 1;
     foreach ($tiers as $tier) {
-        if ($sessions >= $tier) {
+        if ($bill_sessions >= $tier) {
             $applicable_tier = $tier;
         }
     }
@@ -89,22 +98,42 @@ if ($duration > 0 && $sessions > 0) {
         $rate_per_session = $rate_matrix[$duration][$applicable_tier];
         $single_rate = $rate_matrix[$duration][1] ?? $rate_per_session;
 
+        // Flat package price = tier rate x the billed tier count (not the delivered count).
+        $package_price = $rate_per_session * $bill_sessions;
+        // Regular price compares against paying the single-session rate for every delivered session.
         $regular_price = $single_rate * $sessions;
-        $package_price = $rate_per_session * $sessions;
-        $savings = $regular_price - $package_price;
+
+        // Manual discount applies on top of the volume (package) price.
+        $discount_amount = round($package_price * ($discount_percent / 100), 2);
+        $net_price = $package_price - $discount_amount;
+        // Total the client saves vs. the regular single-session price (volume + discount).
+        $savings = max(0, $regular_price - $net_price);
+
+        $length_label = ($duration == 60 ? 'one-hour' : ($duration == 45 ? '45-minute' : '30-minute'));
+        $description = "{$sessions} {$length_label} coaching sessions with {$coach}";
+        if ($bill_sessions !== $sessions) {
+            $description .= " (billed at the {$bill_sessions}-session package rate)";
+        }
+        if ($discount_percent > 0) {
+            $description .= " — " . rtrim(rtrim(number_format($discount_percent, 1), '0'), '.') . "% discount applied";
+        }
 
         $response['calculation'] = [
             'duration' => $duration,
             'sessions' => $sessions,
+            'bill_sessions' => $bill_sessions,
             'applicable_tier' => $applicable_tier,
             'rate_per_session' => $rate_per_session,
             'single_session_rate' => $single_rate,
             'regular_price' => $regular_price,
             'package_price' => $package_price,
+            'discount_percent' => $discount_percent,
+            'discount_amount' => $discount_amount,
+            'net_price' => $net_price,
             'savings' => $savings,
             'savings_percent' => $regular_price > 0 ? round(($savings / $regular_price) * 100) : 0,
             'package_name' => "{$sessions} x {$duration}min Sessions with {$coach}",
-            'description' => "{$sessions} " . ($duration == 60 ? 'one-hour' : ($duration == 45 ? '45-minute' : '30-minute')) . " coaching sessions with {$coach}"
+            'description' => $description
         ];
     }
 }
