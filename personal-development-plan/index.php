@@ -611,7 +611,7 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                                                 <span class="savings-badge">Save $<?= number_format($pkg['savings'], 0) ?></span>
                                             <?php endif; ?>
                                         </div>
-                                        <div class="support-package-description"><?= htmlspecialchars($pkg['description']) ?></div>
+                                        <div class="support-package-description"><?= $is_term ? ($pkg['description'] ?? '') : htmlspecialchars($pkg['description'] ?? '') ?></div>
 
                                         <?php if ($has_savings): ?>
                                             <div class="package-pricing-breakdown">
@@ -754,6 +754,11 @@ if ($skin === 'wright' && $contract && !empty($options)) {
                 tier.classList.add('user-selected-elsewhere');
             }
         });
+
+        // Clear any choose-one package/term selection (a contract may offer BOTH
+        // annual options and short-term options — picking one clears the other).
+        document.querySelectorAll('.support-packages-public.choose-one .support-package-card').forEach(card => card.classList.remove('selected'));
+        document.querySelectorAll('.choose-package-btn').forEach(b => { b.textContent = 'Choose this package'; });
 
         // Add selection to clicked tier
         event.currentTarget.classList.add('selected');

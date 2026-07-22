@@ -67,6 +67,15 @@ if ($_POST) {
     $option_1_minimum = (int)($_POST['option_1_minimum_months'] ?? 1);
     $option_2_minimum = (int)($_POST['option_2_minimum_months'] ?? 1);
     $option_3_minimum = (int)($_POST['option_3_minimum_months'] ?? 1);
+
+    // The option description comes from a Quill editor, which emits markup like
+    // "<p><br></p>" (or "&nbsp;") for an empty field. Treat those as blank so an
+    // untouched annual option doesn't trip the "has a description but no prices"
+    // check — this is what lets a contract be sold term-only (no Option 1/2/3).
+    $desc_is_blank = function ($html) {
+        $t = strip_tags(str_replace(['&nbsp;', "\xc2\xa0"], ' ', (string)$html));
+        return trim($t) === '';
+    };
     
     // Validation
     if (empty($first_name)) $errors[] = 'First name is required';
@@ -77,9 +86,9 @@ if ($_POST) {
     // Validate options
     for ($i = 1; $i <= 3; $i++) {
         $main_desc = trim($_POST["option_{$i}_desc"] ?? '');
-        
+
         // If option has a main description, require at least one price
-        if (!empty($main_desc)) {
+        if (!$desc_is_blank($main_desc)) {
             $has_pricing = false;
             
             // Check for simple pricing first
@@ -139,8 +148,8 @@ if ($_POST) {
             // Insert new options with sub-options
             for ($i = 1; $i <= 3; $i++) {
                 $main_desc = trim($_POST["option_{$i}_desc"] ?? '');
-                
-                if (!empty($main_desc)) {
+
+                if (!$desc_is_blank($main_desc)) {
                     // Check if sub-options are defined
                     $has_sub_options = false;
                     for ($s = 1; $s <= 10; $s++) {
@@ -707,13 +716,13 @@ require_once 'includes/header.php';
                         <input type="number" id="term-installments" min="1" max="12" step="1" placeholder="1">
                     </div>
                     <div class="form-group">
-                        <label>Description:</label>
-                        <input type="text" id="term-description" placeholder="Optional short description">
-                    </div>
-                    <div class="form-group">
                         <label>&nbsp;</label>
                         <button type="button" class="add-package-btn" onclick="addTermPackage()">Add Term</button>
                     </div>
+                </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label>Description (optional — formatting supported):</label>
+                    <div id="term-description-editor" style="background:#fff;min-height:80px;"></div>
                 </div>
             </div>
 
@@ -749,7 +758,7 @@ require_once 'includes/header.php';
                                     <button type="button" class="remove-btn" onclick="removePackageWithSavings(this)">Remove</button>
                                 </div>
                                 <div class="package-savings-body">
-                                    <?php if (!empty($pkg['description'])): ?><div class="description"><?= htmlspecialchars($pkg['description']) ?></div><?php endif; ?>
+                                    <?php if (!empty($pkg['description'])): ?><div class="description"><?= $pkg['description'] ?></div><?php endif; ?>
                                     <div class="package-pricing-display">
                                         <div class="pricing-box package">
                                             <div class="label">Term</div>
@@ -917,6 +926,13 @@ require_once 'includes/header.php';
             modules: { toolbar: toolbarOptions }
         });
     }
+
+    // Rich-text editor for the short-term / term description.
+    const termDescEditor = new Quill('#term-description-editor', {
+        theme: 'snow',
+        placeholder: 'Optional description (formatting supported)...',
+        modules: { toolbar: toolbarOptions }
+    });
     
     // Set initial content
     const greetingTextarea = document.querySelector('textarea[name="greeting"]');
@@ -1355,7 +1371,9 @@ require_once 'includes/header.php';
         const label = document.getElementById('term-label').value.trim();
         const months = parseInt(document.getElementById('term-months').value, 10) || 0;
         const price = parseFloat(document.getElementById('term-price').value);
-        const description = document.getElementById('term-description').value.trim();
+        // Rich-text description: keep the HTML, but treat a visually-empty editor
+        // (Quill's "<p><br></p>") as no description.
+        const descriptionHtml = (termDescEditor.getText().trim() === '') ? '' : termDescEditor.root.innerHTML;
         let inst = parseInt(document.getElementById('term-installments').value, 10);
         if (!inst || inst < 1) inst = 1;
         if (inst > 12) inst = 12;
@@ -1380,12 +1398,15 @@ require_once 'includes/header.php';
                             <div class="amount">${inst} × (${'$'}${first.toFixed(2)} + ${'$'}${rest.toFixed(2)})</div>
                         </div>`;
         }
-        const descRow = description ? `<div class="description">${description}</div>` : '';
+        // Card preview renders the description HTML raw; the hidden field stores it
+        // with quotes escaped so it round-trips safely through the value attribute.
+        const descRow = descriptionHtml ? `<div class="description">${descriptionHtml}</div>` : '';
+        const descAttr = descriptionHtml.replace(/"/g, '&quot;');
 
         const packageHtml = `
             <div class="package-with-savings">
                 <input type="hidden" name="support_package_${n}_name" value="${label.replace(/"/g, '&quot;')}">
-                <input type="hidden" name="support_package_${n}_description" value="${description.replace(/"/g, '&quot;')}">
+                <input type="hidden" name="support_package_${n}_description" value="${descAttr}">
                 <input type="hidden" name="support_package_${n}_is_term" value="1">
                 <input type="hidden" name="support_package_${n}_months" value="${months}">
                 <input type="hidden" name="support_package_${n}_net_price" value="${price}">
@@ -1418,7 +1439,7 @@ require_once 'includes/header.php';
         document.getElementById('term-label').value = '';
         document.getElementById('term-price').value = '';
         document.getElementById('term-installments').value = '';
-        document.getElementById('term-description').value = '';
+        termDescEditor.setText('');
 
         // Terms are mutually exclusive — nudge the mode to choose-one.
         const chooseOne = document.querySelector('input[name="coaching_packages_mode"][value="choose_one"]');
