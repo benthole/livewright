@@ -39,9 +39,10 @@ function fc_groups() {
  */
 function fc_field_defs() {
     global $cohort_field_id, $individual_coach_field_id, $group_coach_field_id,
-           $eteam_role_field_id, $cohorts, $individual_coaches, $group_coaches;
+           $eteam_role_field_id, $cohorts, $individual_coaches, $group_coaches,
+           $quarter_field_id;
 
-    return [
+    $defs = [
         'cohort' => [
             'label'         => 'Team / Cohort',
             'keap_field_id' => $cohort_field_id,
@@ -72,6 +73,19 @@ function fc_field_defs() {
             'seed'          => [], // no predefined list; pulled from Keap/data
         ],
     ];
+
+    // Quarter is optional: only managed once its Keap field id is configured
+    // in config.php (server-only). Dormant otherwise.
+    if (isset($quarter_field_id) && (int)$quarter_field_id > 0) {
+        $defs['quarter'] = [
+            'label'         => 'Quarter',
+            'keap_field_id' => (int)$quarter_field_id,
+            'multi'         => false,
+            'seed'          => ['active' => ['Q1', 'Q2', 'Q3', 'Q4']],
+        ];
+    }
+
+    return $defs;
 }
 
 /** Ensure the storage table exists. */
