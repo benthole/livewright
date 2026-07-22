@@ -148,6 +148,61 @@ function keap_get_custom_field_options_cached($fieldId, $ttl = 900, $forceRefres
     return $opts;
 }
 
+/**
+ * Search Keap contacts by name (for people who may not be on the roster yet).
+ *
+ * Uses the List Contacts endpoint filtered by given_name / family_name; either
+ * part may be blank. Keap matches each provided part exactly, so callers should
+ * also try looser fallbacks (e.g. given name only) when a full-name search
+ * returns nothing. Returns an array of contact objects (with custom_fields and
+ * email_addresses), or ['error' => ...] on failure.
+ */
+function keap_search_contacts_by_name($givenName, $familyName, $limit = 25) {
+    $token = get_keap_token();
+
+    $params = ['limit' => (int)$limit, 'optional_properties' => 'custom_fields'];
+    if (trim((string)$givenName) !== '')  $params['given_name']  = trim($givenName);
+    if (trim((string)$familyName) !== '') $params['family_name'] = trim($familyName);
+
+    // Nothing to search on.
+    if (!isset($params['given_name']) && !isset($params['family_name'])) {
+        return [];
+    }
+
+    $url = "https://api.infusionsoft.com/crm/rest/v1/contacts?" . http_build_query($params);
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            "Authorization: Bearer $token",
+            "Content-Type: application/json"
+        ],
+        CURLOPT_TIMEOUT => 20,
+    ]);
+
+    $resp = curl_exec($ch);
+
+    if (curl_errno($ch)) {
+        $error = curl_error($ch);
+        curl_close($ch);
+        error_log('Curl error (contact search): ' . $error);
+        return ['error' => 'Curl error: ' . $error];
+    }
+
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $data = json_decode($resp, true);
+
+    if ($httpCode !== 200) {
+        error_log('Keap API Error (contact search): ' . $resp);
+        return ['error' => 'API Error', 'http_code' => $httpCode];
+    }
+
+    return isset($data['contacts']) ? $data['contacts'] : [];
+}
+
 function keap_get_contacts_by_tag($tagId, $limit = 100, $offset = 0) {
     $token = get_keap_token();
 
