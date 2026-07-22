@@ -6,6 +6,7 @@
  */
 
 require_once('includes/auth.php');
+require_once(__DIR__ . '/includes/ui.php');
 
 $error = '';
 $success = '';
@@ -61,16 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - LiveWright Roster</title>
+    <?php roster_ui_styles(); ?>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        /* ---- Login page: full-viewport centered card on the workbench canvas ---- */
+        body.login-page {
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -78,35 +73,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 20px;
         }
 
-        .login-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        .login-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--r-lg);
+            box-shadow: var(--shadow-md);
             width: 100%;
             max-width: 400px;
             overflow: hidden;
         }
 
         .login-header {
-            background: #2c3e50;
-            color: white;
-            padding: 30px;
-            text-align: center;
+            padding: 32px 32px 24px;
+            background: var(--surface-sunk);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .login-header .login-mark {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: var(--accent-ink);
+            margin-bottom: 6px;
         }
 
         .login-header h1 {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 600;
-            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+            color: var(--ink);
+            margin: 0 0 6px;
         }
 
         .login-header p {
             font-size: 14px;
-            color: #bdc3c7;
+            color: var(--ink-soft);
+            margin: 0;
         }
 
         .login-body {
-            padding: 30px;
+            padding: 32px;
         }
 
         .form-group {
@@ -116,24 +123,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
-            color: #2c3e50;
+            color: var(--ink);
         }
 
         .form-group input {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #ecf0f1;
-            border-radius: 6px;
-            font-size: 16px;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            padding: 11px 12px;
+            border: 1px solid var(--line-strong);
+            border-radius: var(--r-sm);
+            background: var(--surface);
+            color: var(--ink);
+            font-family: inherit;
+            font-size: 15px;
+            transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+        }
+
+        .form-group input::placeholder {
+            color: var(--ink-faint);
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgb(from var(--focus) r g b / 0.20);
         }
 
         .password-wrapper {
@@ -147,80 +161,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .password-toggle {
             position: absolute;
             top: 50%;
-            right: 10px;
+            right: 8px;
             transform: translateY(-50%);
             background: none;
             border: none;
-            color: #3498db;
+            color: var(--accent-ink);
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             padding: 4px 8px;
-            border-radius: 4px;
+            border-radius: var(--r-sm);
+            transition: background var(--dur) var(--ease);
         }
 
         .password-toggle:hover {
-            background: #ecf0f1;
+            background: var(--surface-sunk);
         }
 
-        .password-toggle:focus {
-            outline: 2px solid #3498db;
+        .password-toggle:focus-visible {
+            outline: 2px solid var(--focus);
             outline-offset: 1px;
         }
 
         .btn-login {
             width: 100%;
-            padding: 14px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
+            padding: 12px 16px;
+            background: var(--accent);
+            color: oklch(0.99 0.003 85);
+            border: 1px solid transparent;
+            border-radius: var(--r-sm);
+            font-family: inherit;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
+            transition: background var(--dur) var(--ease);
         }
 
         .btn-login:hover {
-            background: #2980b9;
-        }
-
-        .btn-login:active {
-            transform: scale(0.98);
+            background: var(--accent-hover);
         }
 
         .alert {
-            padding: 12px 15px;
-            border-radius: 6px;
+            padding: 11px 14px;
+            border-radius: var(--r-sm);
             margin-bottom: 20px;
             font-size: 14px;
         }
 
         .alert-error {
-            background: #fdeaea;
-            color: #c0392b;
-            border: 1px solid #f5c6cb;
+            background: var(--danger-bg);
+            color: var(--danger-ink);
+            border: 1px solid var(--line);
         }
 
         .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: var(--ok-bg);
+            color: var(--ok);
+            border: 1px solid var(--line);
         }
 
         .login-footer {
             text-align: center;
-            padding: 20px 30px 30px;
-            color: #7f8c8d;
+            padding: 20px 32px 28px;
+            color: var(--ink-faint);
             font-size: 13px;
-            border-top: 1px solid #ecf0f1;
+            border-top: 1px solid var(--line);
         }
     </style>
 </head>
-<body>
-    <div class="login-container">
+<body class="rui login-page">
+    <div class="login-card">
         <div class="login-header">
-            <h1>LiveWright Roster</h1>
+            <span class="login-mark">LiveWright</span>
+            <h1>Roster</h1>
             <p>Sign in to access the roster</p>
         </div>
 

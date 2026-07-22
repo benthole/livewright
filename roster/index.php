@@ -2,6 +2,7 @@
 // index.php - Display roster data (main entry point)
 
 require_once('includes/auth.php');
+require_once('includes/ui.php');
 require_once('config.php');
 require_once('keap_api.php');
 require_once('lib/field_config.php');
@@ -190,950 +191,353 @@ function getCustomFieldById($customFields, $fieldId) {
     <title>Roster View</title>
     <!-- Quill Editor CSS -->
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <?php roster_ui_styles(); ?>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-            background: #f5f5f5;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 30px;
-            background: <?php echo $viewDropped ? '#7f8c8d' : '#2c3e50'; ?>;
-            color: white;
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-        }
-
-        .header-center {
-            flex: 1;
-            text-align: center;
-        }
-
-        .record-count {
-            font-size: 14px;
-            color: #ecf0f1;
-            background: rgba(255,255,255,0.1);
-            padding: 6px 12px;
-            border-radius: 4px;
-        }
-
-        .refresh-btn {
-            margin-left: 10px;
-            padding: 6px 12px;
-            background: rgba(255,255,255,0.15);
-            color: #ecf0f1;
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 4px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .refresh-btn:hover {
-            background: rgba(255,255,255,0.25);
-        }
-
-        .refresh-btn:active {
-            transform: scale(0.98);
-        }
-
-        .refresh-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .refresh-btn.refreshing .refresh-icon,
-        .refresh-btn.refreshing .refresh-text {
-            display: none;
-        }
-
-        .refresh-btn.refreshing .refresh-spinner {
-            display: inline !important;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .last-sync-time {
-            margin-left: 15px;
-            font-size: 12px;
-            color: #bdc3c7;
-            font-style: italic;
-        }
-
-        .search-box {
-            position: relative;
-        }
-
-        .search-box input {
-            padding: 8px 35px 8px 12px;
-            border: 1px solid #34495e;
-            border-radius: 4px;
-            font-size: 14px;
-            width: 250px;
-            background: white;
-        }
-
-        .search-box input:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-
-        .search-icon {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #7f8c8d;
-        }
-
-        .reset-filters {
-            margin-top: 8px;
-            text-align: right;
-        }
-
-        .reset-filters a {
-            font-size: 12px;
-            color: #95a5a6;
-            cursor: pointer;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-
-        .reset-filters a:hover {
-            color: #3498db;
-            text-decoration: underline;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        thead {
-            background: #34495e;
-            color: white;
-        }
-
-        th {
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            position: relative;
-        }
-
-        th.sortable {
-            cursor: pointer;
-            user-select: none;
-        }
-
-        th.sortable:hover {
-            background: #2c3e50;
-        }
-
-        th.filterable {
-            cursor: pointer;
-            user-select: none;
-        }
-
-        th.filterable:hover {
-            background: #2c3e50;
-        }
-
-        .sort-indicator {
-            display: inline-block;
-            margin-left: 5px;
-            font-size: 10px;
-            color: #95a5a6;
-        }
-
-        .filter-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-            min-width: 200px;
-            max-height: 300px;
-            overflow-y: auto;
-            display: none;
-        }
-
-        .filter-dropdown.show {
-            display: block;
-        }
-
-        .filter-actions {
-            padding: 8px 12px;
-            border-bottom: 1px solid #ecf0f1;
-            background: #f8f9fa;
-        }
-
-        .filter-actions a {
-            font-size: 12px;
-            color: #3498db;
-            cursor: pointer;
-            text-decoration: underline;
-        }
-
-        .filter-actions a:hover {
-            color: #2980b9;
-        }
-
-        .filter-option {
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            color: #2c3e50;
-            font-size: 13px;
-            text-transform: none;
-            font-weight: normal;
-            letter-spacing: normal;
-        }
-
-        .filter-option:hover {
-            background: #f8f9fa;
-        }
-
-        .filter-option input[type="checkbox"] {
-            cursor: pointer;
-        }
-
-        .filter-option label {
-            cursor: pointer;
-        }
-
-        td {
-            padding: 15px;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        tbody tr:nth-child(even) {
-            background: #f9fafb;
-        }
-
-        tbody tr:hover {
-            background: #f0f3f5;
-        }
-
-        a {
-            color: #3498db;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-
-        a:hover {
-            color: #2980b9;
-            text-decoration: underline;
-        }
-
-        .icon-wrapper {
-            position: relative;
-            display: inline-block;
-            cursor: pointer;
-        }
-
-        .icon {
-            font-size: 18px;
-            color: #3498db;
-            transition: color 0.2s;
-        }
-
-        .icon:hover {
-            color: #2980b9;
-        }
-
-        .tooltip {
-            visibility: hidden;
-            position: absolute;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2c3e50;
-            color: white;
-            padding: 10px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            white-space: nowrap;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .tooltip::after {
-            content: '';
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            border: 5px solid transparent;
-            border-top-color: #2c3e50;
-        }
-
-        .icon-wrapper:hover .tooltip {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        .copied-message {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #27ae60;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 10000;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .copied-message.show {
-            opacity: 1;
-        }
-
-        .no-data {
-            padding: 40px;
-            text-align: center;
-            color: #7f8c8d;
-            font-size: 16px;
-        }
-
-        .care-label {
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .care-badges {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-
-        .care-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            background: #ecf0f1;
-            color: #2c3e50;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .coach-item {
-            margin-bottom: 6px;
-        }
-
-        .coach-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .coach-badge {
-            display: inline-block;
-            margin-left: 8px;
-            padding: 4px 8px;
-            color: white;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .coach-badge-individual {
-            background: #3498db;
-        }
-
-        .coach-badge-group {
-            background: #27ae60;
-        }
-
-        .contact-name-link {
-            color: #3498db;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-
-        .contact-name-link:hover {
-            color: #2980b9;
-            text-decoration: underline;
-        }
-
-        .editable-name {
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-
-        .editable-name:hover {
-            background: #f0f3f5;
-        }
-
-        .editable-name::after {
-            content: ' ✏️';
-            font-size: 14px;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .editable-name:hover::after {
-            opacity: 1;
-        }
-
-        .name-saving {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
-        .checkbox-cell {
-            width: 40px;
-            text-align: center;
-        }
-
-        .payment-cell {
-            width: 40px;
-            text-align: center;
-        }
-
-        .payment-icon {
-            cursor: pointer;
-        }
-
-        .payment-icon .icon {
-            font-size: 16px;
-            color: #27ae60;
-        }
-
-        .payment-icon:hover .icon {
-            color: #1e8449;
-        }
-
-        .files-cell {
-            width: 40px;
-            text-align: center;
-        }
-
-        .files-link {
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .files-link .icon {
-            font-size: 16px;
-            color: #3498db;
-            transition: transform 0.2s;
-        }
-
-        .files-link:hover .icon {
-            color: #2980b9;
-            transform: scale(1.1);
-        }
-
-        .checkbox-cell input[type="checkbox"] {
-            cursor: pointer;
-            width: 16px;
-            height: 16px;
-        }
-
-        .bulk-actions-container {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: white;
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            display: none;
-            z-index: 2000;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .bulk-actions-container.show {
-            display: flex;
-        }
-
-        .bulk-actions-count {
-            font-size: 14px;
-            color: #2c3e50;
-            font-weight: 600;
-        }
-
-        .bulk-actions-dropdown {
-            position: relative;
-        }
-
-        .bulk-actions-btn {
-            padding: 8px 16px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: background 0.2s;
-        }
-
-        .bulk-actions-btn:hover {
-            background: #2980b9;
-        }
-
-        .bulk-actions-menu {
-            position: absolute;
-            bottom: 100%;
-            left: 0;
-            margin-bottom: 8px;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            min-width: 180px;
-            display: none;
-        }
-
-        .bulk-actions-menu.show {
-            display: block;
-        }
-
-        .bulk-action-item {
-            padding: 10px 15px;
-            cursor: pointer;
-            font-size: 14px;
-            color: #2c3e50;
-            transition: background 0.2s;
-        }
-
-        .bulk-action-item:hover {
-            background: #f8f9fa;
-        }
-
-        .bulk-actions-cancel {
-            padding: 8px 16px;
-            background: transparent;
-            color: #7f8c8d;
-            border: none;
-            font-size: 14px;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-
-        .bulk-actions-cancel:hover {
-            color: #2c3e50;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 3000;
-        }
-
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        .modal {
-            background: white;
-            border-radius: 8px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            margin-bottom: 20px;
-        }
-
-        .modal-header h2 {
-            margin: 0;
-            font-size: 24px;
-            color: #2c3e50;
-        }
-
-        .modal-body {
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            font-family: inherit;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-
-        .form-group textarea {
-            min-height: 150px;
-            resize: vertical;
-        }
-
-        /* WYSIWYG Editor Styling */
-        #emailEditorContainer {
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-        }
-
-        #emailEditorContainer:focus-within {
-            border-color: #3498db;
-        }
-
-        #emailEditorContainer .ql-toolbar {
-            border: none;
-            border-bottom: 1px solid #ddd;
-            background: #f8f9fa;
-            border-radius: 4px 4px 0 0;
-        }
-
-        #emailEditorContainer .ql-container {
-            border: none;
-            font-size: 14px;
-            font-family: inherit;
-        }
-
-        #emailEditorContainer .ql-editor {
-            min-height: 150px;
-            padding: 10px;
-        }
-
-        #emailEditorContainer .ql-editor.ql-blank::before {
-            font-style: normal;
-            color: #7f8c8d;
-        }
-
-        .ql-tooltip {
-            z-index: 3001;
-        }
-
-        .modal-footer {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-        }
-
-        .btn-primary {
-            padding: 10px 20px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .btn-primary:hover {
-            background: #2980b9;
-        }
-
-        .btn-secondary {
-            padding: 10px 20px;
-            background: #ecf0f1;
-            color: #2c3e50;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .btn-secondary:hover {
-            background: #d5dbdb;
-        }
-
-        /* Coach Modal Styles */
-        .coach-action-toggle {
-            display: flex;
-            background: #f0f2f5;
-            border-radius: 8px;
-            padding: 4px;
-            gap: 4px;
-            margin-bottom: 16px;
-        }
-
-        .coach-action-toggle label {
-            flex: 1;
-            text-align: center;
-            padding: 10px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            color: #64748b;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .coach-action-toggle label:hover {
-            color: #334155;
-            background: rgba(255,255,255,0.5);
-        }
-
-        .coach-action-toggle input[type="radio"] {
-            display: none;
-        }
-
-        .coach-action-toggle input[type="radio"]:checked + span {
-            background: white;
-            color: #1e293b;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .coach-action-toggle .toggle-option {
-            display: block;
-            padding: 10px 16px;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-        }
-
-        .coach-action-toggle .toggle-icon {
-            font-size: 14px;
-        }
-
-        .coach-list-container {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            overflow: hidden;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .coach-list-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            cursor: pointer;
-            transition: background 0.15s ease;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .coach-list-item:last-child {
-            border-bottom: none;
-        }
-
-        .coach-list-item:nth-child(odd) {
-            background: #fafbfc;
-        }
-
-        .coach-list-item:nth-child(even) {
-            background: #ffffff;
-        }
-
-        .coach-list-item:hover {
-            background: #f0f7ff;
-        }
-
-        .coach-list-item input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            margin: 0;
-            margin-right: 12px;
-            cursor: pointer;
-            accent-color: #3498db;
-        }
-
-        .coach-list-item .coach-name {
-            font-size: 14px;
-            color: #334155;
-            font-weight: 500;
-        }
-
-        .coach-list-item.selected {
-            background: #eff6ff;
-        }
-
-        .coach-list-item.selected .coach-name {
-            color: #1d4ed8;
-        }
-
-        .user-menu {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-left: 20px;
-        }
-
-        .user-info-display {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .user-name {
-            font-size: 14px;
-            color: #ecf0f1;
-        }
-
-        .user-role-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .role-viewer {
-            background: rgba(255,255,255,0.1);
-            color: #bdc3c7;
-        }
-
-        .role-editor {
-            background: rgba(46, 204, 113, 0.2);
-            color: #2ecc71;
-        }
-
-        .role-admin {
-            background: rgba(52, 152, 219, 0.2);
-            color: #3498db;
-        }
-
-        .header-link {
-            color: #ecf0f1;
-            text-decoration: none;
-            font-size: 13px;
-            padding: 6px 12px;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-
-        .header-link:hover {
-            background: rgba(255,255,255,0.1);
-            text-decoration: none;
-        }
-
-        .viewer-notice {
-            background: #ffeaa7;
-            color: #856404;
-            padding: 10px 20px;
-            text-align: center;
-            font-size: 13px;
-        }
+    /* ============================================================
+       Roster page-specific styles (tokens/base/topbar live in includes/ui.php)
+       ============================================================ */
+
+    /* Header slots ------------------------------------------------ */
+    .record-count {
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--ink-soft);
+        background: var(--surface-sunk);
+        padding: 5px 11px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+    }
+
+    .refresh-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: var(--surface);
+        color: var(--ink-soft);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-sm);
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+    }
+    .refresh-btn:hover { background: var(--surface-sunk); color: var(--ink); }
+    .refresh-btn:active { transform: translateY(0.5px); }
+    .refresh-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .refresh-btn.refreshing .refresh-icon,
+    .refresh-btn.refreshing .refresh-text { display: none; }
+    .refresh-btn.refreshing .refresh-spinner { display: inline !important; animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .last-sync-time { font-size: 11.5px; color: var(--ink-faint); font-style: italic; }
+
+    .search-box { position: relative; }
+    .search-box input {
+        padding: 8px 34px 8px 12px;
+        width: 260px;
+        max-width: 44vw;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-sm);
+        background: var(--surface);
+        color: var(--ink);
+        font-family: inherit;
+        font-size: 14px;
+        transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+    }
+    .search-box input::placeholder { color: var(--ink-faint); }
+    .search-box input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgb(from var(--focus) r g b / 0.20);
+    }
+    .search-icon { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--ink-faint); font-size: 13px; pointer-events: none; }
+
+    .reset-filters { margin-top: 6px; }
+    .reset-filters a { font-size: 12px; color: var(--ink-faint); cursor: pointer; text-decoration: none; transition: color var(--dur) var(--ease); }
+    .reset-filters a:hover { color: var(--accent-ink); text-decoration: underline; }
+
+    /* Table ------------------------------------------------------- */
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+
+    thead { background: var(--surface-sunk); }
+    th {
+        padding: 11px 16px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 11.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-soft);
+        border-bottom: 1px solid var(--line-strong);
+        position: relative;
+        white-space: nowrap;
+    }
+    th.sortable, th.filterable { cursor: pointer; user-select: none; transition: color var(--dur) var(--ease); }
+    th.sortable:hover, th.filterable:hover { color: var(--accent-ink); }
+    .sort-indicator { display: inline-block; margin-left: 5px; font-size: 9px; color: var(--ink-faint); }
+    th.filter-active { color: var(--accent-ink); }
+    th.filter-active::after {
+        content: "";
+        position: absolute; top: 12px; right: 8px;
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--accent);
+    }
+
+    .filter-dropdown {
+        position: absolute; top: 100%; left: 0;
+        background: var(--surface-raise);
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-md);
+        z-index: 1000;
+        min-width: 210px; max-height: 320px; overflow-y: auto;
+        display: none; padding: 4px;
+    }
+    .filter-dropdown.show { display: block; }
+    .filter-actions { padding: 8px 10px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+    .filter-actions a { font-size: 12px; color: var(--accent-ink); cursor: pointer; text-decoration: none; margin-right: 12px; }
+    .filter-actions a:hover { text-decoration: underline; }
+    .filter-option {
+        padding: 7px 10px; display: flex; align-items: center; gap: 9px; cursor: pointer;
+        color: var(--ink); font-size: 13px; text-transform: none; font-weight: 400; letter-spacing: normal;
+        border-radius: var(--r-sm);
+    }
+    .filter-option:hover { background: var(--surface-sunk); }
+    .filter-option input[type="checkbox"] { cursor: pointer; accent-color: var(--accent); width: 15px; height: 15px; }
+    .filter-option label { cursor: pointer; }
+
+    td { padding: 11px 16px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--ink); vertical-align: top; }
+    tbody tr { transition: background var(--dur) var(--ease); }
+    tbody tr:nth-child(even) { background: var(--surface-sunk); }
+    tbody tr:hover { background: var(--accent-weak); }
+    tbody tr.row-selected { background: var(--accent-weak); box-shadow: inset 3px 0 0 var(--accent); }
+
+    a { color: var(--accent-ink); text-decoration: none; transition: color var(--dur) var(--ease); }
+    a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+    /* Contact / copy affordances --------------------------------- */
+    .icon-wrapper { position: relative; display: inline-block; cursor: pointer; }
+    .icon { font-size: 17px; color: var(--accent); transition: color var(--dur) var(--ease); }
+    .icon:hover { color: var(--accent-hover); }
+
+    .tooltip {
+        visibility: hidden; position: absolute; bottom: 128%; left: 50%; transform: translateX(-50%);
+        background: var(--ink); color: var(--surface); padding: 9px 12px; border-radius: var(--r-sm);
+        font-size: 12px; white-space: nowrap; z-index: 1000; opacity: 0; transition: opacity var(--dur) var(--ease);
+        box-shadow: var(--shadow-md);
+    }
+    .tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--ink); }
+    .icon-wrapper:hover .tooltip { visibility: visible; opacity: 1; }
+    .tooltip small { color: rgb(from var(--surface) r g b / 0.7); }
+
+    .copied-message {
+        position: fixed; top: 20px; right: 20px; background: var(--ok); color: oklch(0.99 0.003 85);
+        padding: 12px 18px; border-radius: var(--r-sm); box-shadow: var(--shadow-md); z-index: 10000;
+        opacity: 0; transition: opacity 0.3s var(--ease); font-weight: 500; font-size: 14px;
+    }
+    .copied-message.show { opacity: 1; }
+
+    .no-data { padding: 56px 40px; text-align: center; color: var(--ink-faint); font-size: 15px; }
+
+    /* CARE + coach badges ---------------------------------------- */
+    .care-label { margin-bottom: 6px; font-weight: 500; color: var(--ink); }
+    .care-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+    .care-badge {
+        display: inline-block; padding: 3px 8px; background: var(--tag-neutral-bg); color: var(--tag-neutral-ink);
+        border-radius: var(--r-sm); font-size: 12px; font-weight: 600; white-space: nowrap;
+    }
+
+    .coach-item { margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .coach-item:last-child { margin-bottom: 0; }
+    .coach-badge {
+        display: inline-block; padding: 2px 8px; border-radius: var(--r-sm);
+        font-size: 11px; font-weight: 600; white-space: nowrap;
+    }
+    .coach-badge-individual { background: var(--tag-individual-bg); color: var(--tag-individual-ink); }
+    .coach-badge-group { background: var(--tag-group-bg); color: var(--tag-group-ink); }
+
+    .eteam-badge {
+        display: inline-block; padding: 2px 9px; border-radius: 999px;
+        background: var(--tag-eteam-bg); color: var(--tag-eteam-ink);
+        font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    }
+
+    .contact-name-link { color: var(--accent-ink); cursor: pointer; transition: color var(--dur) var(--ease); }
+    .contact-name-link:hover { color: var(--accent-hover); text-decoration: underline; }
+
+    .editable-name { cursor: pointer; padding: 3px 7px; margin: -3px -7px; border-radius: var(--r-sm); transition: background var(--dur) var(--ease); }
+    .editable-name:hover { background: var(--surface-sunk); }
+    .editable-name::after { content: ' ✏️'; font-size: 13px; opacity: 0; transition: opacity var(--dur) var(--ease); }
+    .editable-name:hover::after { opacity: 1; }
+    .name-saving { opacity: 0.6; pointer-events: none; }
+
+    .checkbox-cell { width: 42px; text-align: center; }
+    .payment-cell, .files-cell { width: 42px; text-align: center; }
+    .payment-icon { cursor: pointer; }
+    .payment-icon .icon { font-size: 16px; color: var(--ok); }
+    .payment-icon:hover .icon { color: oklch(0.46 0.09 150); }
+    .files-link { text-decoration: none; display: inline-block; }
+    .files-link .icon { font-size: 16px; color: var(--accent); transition: transform var(--dur) var(--ease); }
+    .files-link:hover .icon { color: var(--accent-hover); transform: scale(1.1); }
+    .checkbox-cell input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: var(--accent); }
+
+    /* Bulk actions bar ------------------------------------------- */
+    .bulk-actions-container {
+        position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+        background: var(--surface-raise); padding: 12px 20px; border-radius: var(--r-md);
+        border: 1px solid var(--line); box-shadow: var(--shadow-md);
+        display: none; z-index: 2000; align-items: center; gap: 14px;
+    }
+    .bulk-actions-container.show { display: flex; }
+    .bulk-actions-count { font-size: 14px; color: var(--ink); font-weight: 600; }
+    .bulk-actions-dropdown { position: relative; }
+    .bulk-actions-btn {
+        padding: 8px 15px; background: var(--accent); color: oklch(0.99 0.003 85); border: none;
+        border-radius: var(--r-sm); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+        display: flex; align-items: center; gap: 8px; transition: background var(--dur) var(--ease);
+    }
+    .bulk-actions-btn:hover { background: var(--accent-hover); }
+    .bulk-actions-menu {
+        position: absolute; bottom: 100%; left: 0; margin-bottom: 8px;
+        background: var(--surface-raise); border: 1px solid var(--line); border-radius: var(--r-md);
+        box-shadow: var(--shadow-md); min-width: 190px; display: none; padding: 4px;
+    }
+    .bulk-actions-menu.show { display: block; }
+    .bulk-action-item { padding: 9px 12px; cursor: pointer; font-size: 14px; color: var(--ink); border-radius: var(--r-sm); transition: background var(--dur) var(--ease); }
+    .bulk-action-item:hover { background: var(--surface-sunk); }
+    .bulk-actions-cancel { padding: 8px 12px; background: transparent; color: var(--ink-faint); border: none; font-family: inherit; font-size: 14px; cursor: pointer; transition: color var(--dur) var(--ease); }
+    .bulk-actions-cancel:hover { color: var(--ink); }
+
+    /* Modals ------------------------------------------------------ */
+    .modal-overlay {
+        position: fixed; inset: 0; background: rgb(from var(--ink) r g b / 0.45);
+        display: none; align-items: center; justify-content: center; z-index: 3000;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+        background: var(--surface); border-radius: var(--r-md); padding: 28px;
+        max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;
+        box-shadow: var(--shadow-md); border: 1px solid var(--line);
+    }
+    .modal-header { margin-bottom: 18px; }
+    .modal-header h2 { margin: 0; font-size: 20px; font-weight: 600; color: var(--ink); }
+    .modal-body { margin-bottom: 20px; }
+
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--ink); }
+    .form-group input, .form-group textarea, .form-group select {
+        width: 100%; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+        font-size: 14px; font-family: inherit; background: var(--surface); color: var(--ink);
+        transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+    }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+        outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgb(from var(--focus) r g b / 0.20);
+    }
+    .form-group textarea { min-height: 150px; resize: vertical; }
+
+    /* WYSIWYG editor */
+    #emailEditorContainer { border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); }
+    #emailEditorContainer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(from var(--focus) r g b / 0.20); }
+    #emailEditorContainer .ql-toolbar { border: none; border-bottom: 1px solid var(--line); background: var(--surface-sunk); border-radius: var(--r-sm) var(--r-sm) 0 0; }
+    #emailEditorContainer .ql-container { border: none; font-size: 14px; font-family: inherit; }
+    #emailEditorContainer .ql-editor { min-height: 150px; padding: 12px; }
+    #emailEditorContainer .ql-editor.ql-blank::before { font-style: normal; color: var(--ink-faint); }
+    .ql-tooltip { z-index: 3001; }
+
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* Local button aliases mapped onto the shared system */
+    .btn-primary {
+        padding: 10px 18px; background: var(--accent); color: oklch(0.99 0.003 85); border: 1px solid transparent;
+        border-radius: var(--r-sm); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+        transition: background var(--dur) var(--ease);
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary {
+        padding: 10px 18px; background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong);
+        border-radius: var(--r-sm); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+        transition: background var(--dur) var(--ease);
+    }
+    .btn-secondary:hover { background: var(--surface-sunk); }
+
+    /* Coach modal ------------------------------------------------- */
+    .coach-action-toggle { display: flex; background: var(--surface-sunk); border-radius: var(--r-md); padding: 4px; gap: 4px; margin-bottom: 16px; }
+    .coach-action-toggle label {
+        flex: 1; text-align: center; padding: 9px 16px; border-radius: var(--r-sm); cursor: pointer;
+        font-size: 13px; font-weight: 500; color: var(--ink-soft); transition: color var(--dur) var(--ease);
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .coach-action-toggle label:hover { color: var(--ink); }
+    .coach-action-toggle input[type="radio"] { display: none; }
+    .coach-action-toggle input[type="radio"]:checked + span {
+        background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm);
+    }
+    .coach-action-toggle .toggle-option { display: block; padding: 9px 16px; border-radius: var(--r-sm); transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
+    .coach-action-toggle .toggle-icon { font-size: 14px; }
+
+    .coach-list-container { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; max-height: 200px; overflow-y: auto; }
+    .coach-list-item {
+        display: flex; align-items: center; padding: 11px 15px; cursor: pointer;
+        transition: background var(--dur) var(--ease); border-bottom: 1px solid var(--line);
+    }
+    .coach-list-item:last-child { border-bottom: none; }
+    .coach-list-item:nth-child(even) { background: var(--surface-sunk); }
+    .coach-list-item:hover { background: var(--accent-weak); }
+    .coach-list-item input[type="checkbox"] { width: 17px; height: 17px; margin: 0 12px 0 0; cursor: pointer; accent-color: var(--accent); }
+    .coach-list-item .coach-name { font-size: 14px; color: var(--ink); font-weight: 500; }
+    .coach-list-item.selected { background: var(--accent-weak); }
+    .coach-list-item.selected .coach-name { color: var(--accent-ink); }
+
+    /* Dropped-view toggle strip ---------------------------------- */
+    .view-toggles { text-align: center; margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+    /* Responsive -------------------------------------------------- */
+    @media (max-width: 720px) {
+        .search-box input { width: 100%; max-width: none; }
+        th, td { padding: 10px 12px; }
+    }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header-row">
-            <h1><?php echo $viewDropped ? 'Dropped Contacts' : 'LiveWright Roster'; ?></h1>
-            <div class="header-center">
-                <span id="recordCount" class="record-count"></span>
-                <button id="refreshRosterBtn" class="refresh-btn" title="Refresh roster data from Keap">
-                    <span class="refresh-icon">🔄</span>
-                    <span class="refresh-text">Refresh</span>
-                    <span class="refresh-spinner" style="display: none;">⏳</span>
-                </button>
-                <?php if ($lastSyncTime): ?>
-                <span class="last-sync-time" title="Last synced from Keap">
-                    Last sync: <?php echo date('M j, g:i A', strtotime($lastSyncTime)); ?>
-                </span>
-                <?php endif; ?>
+<body class="rui">
+    <div class="rui-container">
+        <?php
+        ob_start(); ?>
+            <span id="recordCount" class="record-count"></span>
+            <button id="refreshRosterBtn" class="refresh-btn" title="Refresh roster data from Keap">
+                <span class="refresh-icon">🔄</span>
+                <span class="refresh-text">Refresh</span>
+                <span class="refresh-spinner" style="display: none;">⏳</span>
+            </button>
+            <?php if ($lastSyncTime): ?>
+            <span class="last-sync-time" title="Last synced from Keap">Last sync: <?php echo date('M j, g:i A', strtotime($lastSyncTime)); ?></span>
+            <?php endif;
+        $rosterCenterHtml = ob_get_clean();
+        ob_start(); ?>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search roster..." aria-label="Search roster">
+                <span class="search-icon" aria-hidden="true">🔍</span>
             </div>
-            <div>
-                <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Search roster...">
-                    <span class="search-icon">🔍</span>
-                </div>
-                <div class="reset-filters">
-                    <a id="resetAllFilters">Clear search & filters</a>
-                </div>
-            </div>
-            <div class="user-menu">
-                <div class="user-info-display">
-                    <span class="user-name"><?php echo htmlspecialchars($current_user['name']); ?></span>
-                    <span class="user-role-badge role-<?php echo $current_user['role']; ?>"><?php echo ucfirst($current_user['role']); ?></span>
-                </div>
-                <a href="campaign_reports.php" class="header-link">Campaign Reports</a>
-                <?php if ($user_is_admin): ?>
-                <a href="admin/organize_fields.php" class="header-link">Organize Fields</a>
-                <a href="admin/users.php" class="header-link">Manage Users</a>
-                <?php endif; ?>
-                <a href="logout.php" class="header-link">Logout</a>
-            </div>
-        </div>
+            <div class="reset-filters"><a id="resetAllFilters" tabindex="0" role="button">Clear search &amp; filters</a></div>
+            <?php
+        $rosterSearchHtml = ob_get_clean();
+        roster_ui_topbar([
+            'base'       => '',
+            'active'     => 'roster',
+            'page_title' => $viewDropped ? 'Dropped Contacts' : 'Roster',
+            'state_chip' => $viewDropped ? 'Dropped view' : '',
+            'center'     => $rosterCenterHtml,
+            'search'     => $rosterSearchHtml,
+            'user'       => $current_user,
+            'is_admin'   => $user_is_admin,
+            'can_edit'   => $user_can_edit,
+        ]);
+        ?>
 
         <?php if (!$user_can_edit): ?>
-        <div class="viewer-notice">
+        <div class="rui-notice rui-notice--warn">
             You have view-only access. Contact an administrator if you need to make edits.
         </div>
         <?php endif; ?>
@@ -1303,7 +707,7 @@ function getCustomFieldById($customFields, $fieldId) {
                         <?php endif; ?>
                         <td>
                             <?php if ($isEteam): ?>
-                                <span style="background:#7c3aed;color:white;padding:2px 8px;border-radius:10px;font-size:0.8em;font-weight:600;"><?php echo htmlspecialchars($eteamRole); ?></span>
+                                <span class="eteam-badge"><?php echo htmlspecialchars($eteamRole); ?></span>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -1351,12 +755,12 @@ function getCustomFieldById($customFields, $fieldId) {
     </div>
 
     <!-- Dropped contacts toggle -->
-    <div style="text-align: center; margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+    <div class="view-toggles">
         <?php if ($viewDropped): ?>
-        <a href="./" style="display: inline-block; padding: 10px 20px; background: #34495e; color: white; border-radius: 4px; font-size: 14px; font-weight: 600; text-decoration: none;">&larr; Back to Roster</a>
+        <a href="./" class="rui-btn rui-btn--secondary">&larr; Back to Roster</a>
         <?php else: ?>
-        <a href="./?dropped=1" style="display: inline-block; padding: 10px 20px; background: #7f8c8d; color: white; border-radius: 4px; font-size: 14px; font-weight: 600; text-decoration: none;">View Dropped</a>
-        <a href="scheduled_drops.php" style="display: inline-block; padding: 10px 20px; background: #95a5a6; color: white; border-radius: 4px; font-size: 14px; font-weight: 600; text-decoration: none;">Scheduled Drops</a>
+        <a href="./?dropped=1" class="rui-btn rui-btn--ghost">View Dropped</a>
+        <a href="scheduled_drops.php" class="rui-btn rui-btn--ghost">Scheduled Drops</a>
         <?php endif; ?>
     </div>
 
@@ -1386,11 +790,11 @@ function getCustomFieldById($customFields, $fieldId) {
                 <h2>Change Team</h2>
             </div>
             <div class="modal-body">
-                <p style="margin-bottom: 15px; color: #7f8c8d;">Select a new team for the <strong id="cohortChangeCount">0</strong> selected contact(s):</p>
+                <p style="margin-bottom: 15px; color: var(--ink-faint);">Select a new team for the <strong id="cohortChangeCount">0</strong> selected contact(s):</p>
                 <div class="form-group">
                     <label for="cohortSelect">Team</label>
                     <div style="display: flex; gap: 8px; align-items: flex-start;">
-                        <select id="cohortSelect" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                        <select id="cohortSelect" style="flex: 1; padding: 10px; border: 1px solid var(--line-strong); border-radius: 4px; font-size: 14px;">
                             <option value="">-- Select Team --</option>
                             <?php foreach ($cohortGroups as $groupLabel => $groupTeams): ?>
                             <optgroup label="<?php echo htmlspecialchars($groupLabel); ?>">
@@ -1404,7 +808,7 @@ function getCustomFieldById($customFields, $fieldId) {
                             </optgroup>
                             <?php endforeach; ?>
                         </select>
-                        <button type="button" id="syncTeamsBtn" title="Sync team values from Keap" style="padding: 10px 14px; border: 1px solid #17a2b8; background: white; color: #17a2b8; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;" onmouseover="this.style.background='#17a2b8';this.style.color='white'" onmouseout="this.style.background='white';this.style.color='#17a2b8'">🔄 Sync</button>
+                        <button type="button" id="syncTeamsBtn" title="Sync team values from Keap" style="padding: 10px 14px; border: 1px solid var(--accent); background: white; color: var(--accent); border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap;" onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='white';this.style.color='var(--accent)'">🔄 Sync</button>
                     </div>
                     <div id="syncTeamsResult" style="margin-top: 8px; font-size: 13px; display: none;"></div>
                 </div>
@@ -1420,36 +824,36 @@ function getCustomFieldById($customFields, $fieldId) {
     <div class="modal-overlay" id="dropConfirmModal">
         <div class="modal" style="max-width: 520px;">
             <div class="modal-header">
-                <h2 style="color: #c0392b;">Confirm Drop</h2>
+                <h2 style="color: var(--danger);">Confirm Drop</h2>
             </div>
             <div class="modal-body">
                 <p style="margin-bottom: 12px;">You are about to drop <strong id="dropConfirmCount">0</strong> contact(s).</p>
 
-                <div style="background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; margin-bottom: 14px;">
-                    <label style="font-weight: 600; font-size: 13px; color: #334155; display: block; margin-bottom: 8px;">When should this drop take effect?</label>
+                <div style="background: var(--surface-sunk); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; margin-bottom: 14px;">
+                    <label style="font-weight: 600; font-size: 13px; color: var(--ink); display: block; margin-bottom: 8px;">When should this drop take effect?</label>
                     <label style="display: block; margin-bottom: 6px; font-size: 14px;">
                         <input type="radio" name="dropTiming" value="now" checked> Drop immediately
                     </label>
                     <label style="display: block; font-size: 14px;">
                         <input type="radio" name="dropTiming" value="scheduled"> Schedule for a future date
                     </label>
-                    <input type="date" id="dropScheduledFor" min="" style="margin-top: 8px; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; display: none;">
-                    <p id="dropScheduleHelp" style="font-size: 12px; color: #94a3b8; margin: 8px 0 0; display: none;">A daily processor will run the drop on the chosen date. The contact stays active until then.</p>
+                    <input type="date" id="dropScheduledFor" min="" style="margin-top: 8px; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: 4px; display: none;">
+                    <p id="dropScheduleHelp" style="font-size: 12px; color: var(--ink-faint); margin: 8px 0 0; display: none;">A daily processor will run the drop on the chosen date. The contact stays active until then.</p>
                 </div>
 
                 <p style="margin-bottom: 12px;">When the drop runs, it will:</p>
-                <ul style="margin: 0 0 16px 20px; color: #555; font-size: 14px; line-height: 1.6;">
+                <ul style="margin: 0 0 16px 20px; color: var(--ink-soft); font-size: 14px; line-height: 1.6;">
                     <li>Change their team to <code>-dropped</code></li>
                     <li>Apply the Dropped tag in Keap</li>
                     <li>Unassign their individual coach and group coach</li>
                     <li>Archive their previous team, coaches, payment info, and coaching files as a Keap Note</li>
                     <li>Email Sebastian, Maja, and Elizabeth (to stop auto payments and future manual triggers)</li>
                 </ul>
-                <p style="color: #c0392b; font-weight: 600; font-size: 14px;">Are you sure they are dropping?</p>
+                <p style="color: var(--danger); font-weight: 600; font-size: 14px;">Are you sure they are dropping?</p>
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" id="cancelDropConfirm">Cancel</button>
-                <button class="btn-primary" id="confirmDropBtn" style="background: #c0392b; border-color: #c0392b;">Yes, Drop Contact(s)</button>
+                <button class="btn-primary" id="confirmDropBtn" style="background: var(--danger); border-color: var(--danger);">Yes, Drop Contact(s)</button>
             </div>
         </div>
     </div>
@@ -1461,10 +865,10 @@ function getCustomFieldById($customFields, $fieldId) {
                 <h2>Change Coach Assignments</h2>
             </div>
             <div class="modal-body">
-                <p style="margin-bottom: 20px; color: #64748b; font-size: 14px;">Updating <strong style="color: #334155;" id="coachChangeCount">0</strong> selected contact(s)</p>
+                <p style="margin-bottom: 20px; color: var(--ink-soft); font-size: 14px;">Updating <strong style="color: var(--ink);" id="coachChangeCount">0</strong> selected contact(s)</p>
 
                 <div class="form-group">
-                    <label style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 10px; display: block;">Individual Coach(es)</label>
+                    <label style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); margin-bottom: 10px; display: block;">Individual Coach(es)</label>
 
                     <div class="coach-action-toggle">
                         <label>
@@ -1484,7 +888,7 @@ function getCustomFieldById($customFields, $fieldId) {
                     <div id="individualCoachCheckboxes" class="coach-list-container">
                         <?php foreach ($individualCoachValues as $coach): ?>
                             <?php if (fc_is_divider($coach)): ?>
-                            <div class="coach-list-divider" style="text-align:center; color:#cbd5e0; font-size:12px; letter-spacing:.1em; padding:4px 0;"><?php echo htmlspecialchars(fc_divider_label()); ?></div>
+                            <div class="coach-list-divider" style="text-align:center; color:var(--line-strong); font-size:12px; letter-spacing:.1em; padding:4px 0;"><?php echo htmlspecialchars(fc_divider_label()); ?></div>
                             <?php else: ?>
                             <label class="coach-list-item">
                                 <input type="checkbox" name="individualCoaches[]" value="<?php echo htmlspecialchars($coach); ?>">
@@ -1493,12 +897,12 @@ function getCustomFieldById($customFields, $fieldId) {
                             <?php endif; ?>
                         <?php endforeach; ?>
                     </div>
-                    <p style="font-size: 12px; color: #94a3b8; margin-top: 8px;">Select "Replace" then choose coaches to assign</p>
+                    <p style="font-size: 12px; color: var(--ink-faint); margin-top: 8px;">Select "Replace" then choose coaches to assign</p>
                 </div>
 
                 <div class="form-group" style="margin-top: 24px;">
-                    <label style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 10px; display: block;">Group Coach</label>
-                    <select id="groupCoachSelect" style="width: 100%; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #334155; background: white; cursor: pointer;">
+                    <label style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); margin-bottom: 10px; display: block;">Group Coach</label>
+                    <select id="groupCoachSelect" style="width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; color: var(--ink); background: white; cursor: pointer;">
                         <option value="">Keep current assignment</option>
                         <option value="__CLEAR__">Clear assignment</option>
                         <?php foreach ($groupCoachValues as $coach): ?>
@@ -1511,7 +915,7 @@ function getCustomFieldById($customFields, $fieldId) {
                     </select>
                 </div>
             </div>
-            <div class="modal-footer" style="border-top: 1px solid #f1f5f9; padding-top: 20px;">
+            <div class="modal-footer" style="border-top: 1px solid var(--line); padding-top: 20px;">
                 <button class="btn-secondary" id="cancelCoachModal">Cancel</button>
                 <button class="btn-primary" id="saveCoachChange">Save Changes</button>
             </div>
@@ -1525,14 +929,14 @@ function getCustomFieldById($customFields, $fieldId) {
                 <h2>Send Email via Keap</h2>
             </div>
             <div class="modal-body">
-                <p style="margin-bottom: 15px; color: #7f8c8d;">Send an email to <strong id="emailContactCount">0</strong> selected contact(s) through Keap.</p>
+                <p style="margin-bottom: 15px; color: var(--ink-faint);">Send an email to <strong id="emailContactCount">0</strong> selected contact(s) through Keap.</p>
                 <div style="display: flex; gap: 15px;">
                     <div class="form-group" style="flex: 1;">
                         <label for="fromName">From Name</label>
                         <input type="text" id="fromName" placeholder="Your name" value="<?php echo htmlspecialchars($current_user['name'] ?? ''); ?>">
                     </div>
                     <div class="form-group" style="flex: 1;">
-                        <label for="fromEmailUser">From Email <span style="color: #e74c3c;">*</span></label>
+                        <label for="fromEmailUser">From Email <span style="color: var(--danger);">*</span></label>
                         <div style="display: flex; align-items: center;">
                             <?php
                             $defaultEmailUser = '';
@@ -1541,16 +945,16 @@ function getCustomFieldById($customFields, $fieldId) {
                             }
                             ?>
                             <input type="text" id="fromEmailUser" placeholder="username" required style="border-radius: 4px 0 0 4px; border-right: none; flex: 1;" value="<?php echo htmlspecialchars($defaultEmailUser); ?>">
-                            <span style="background: #ecf0f1; border: 1px solid #ddd; padding: 10px 12px; border-radius: 0 4px 4px 0; color: #7f8c8d; font-size: 14px; white-space: nowrap;">@livewright.com</span>
+                            <span style="background: var(--surface-sunk); border: 1px solid var(--line-strong); padding: 10px 12px; border-radius: 0 4px 4px 0; color: var(--ink-faint); font-size: 14px; white-space: nowrap;">@livewright.com</span>
                         </div>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="emailSubject">Subject <span style="color: #e74c3c;">*</span></label>
+                    <label for="emailSubject">Subject <span style="color: var(--danger);">*</span></label>
                     <input type="text" id="emailSubject" placeholder="Email subject" required>
                 </div>
                 <div class="form-group">
-                    <label for="emailMessage">Message <span style="color: #e74c3c;">*</span></label>
+                    <label for="emailMessage">Message <span style="color: var(--danger);">*</span></label>
                     <div id="emailEditorContainer">
                         <div id="emailEditor"></div>
                     </div>
@@ -1570,16 +974,16 @@ function getCustomFieldById($customFields, $fieldId) {
         <div class="modal" style="max-width: 500px;">
             <div class="modal-header">
                 <h2>Payment Information</h2>
-                <p style="margin-top: 5px; color: #7f8c8d; font-size: 14px;" id="paymentContactName"></p>
+                <p style="margin-top: 5px; color: var(--ink-faint); font-size: 14px;" id="paymentContactName"></p>
             </div>
             <div class="modal-body">
                 <div class="form-group">
                     <label>Payment Option</label>
-                    <div id="paymentOptionDisplay" style="padding: 10px; background: #f8f9fa; border-radius: 4px; min-height: 40px;"></div>
+                    <div id="paymentOptionDisplay" style="padding: 10px; background: var(--surface-sunk); border-radius: 4px; min-height: 40px;"></div>
                 </div>
                 <div class="form-group">
                     <label>Payment Frequency</label>
-                    <div id="paymentFrequencyDisplay" style="padding: 10px; background: #f8f9fa; border-radius: 4px; min-height: 40px;"></div>
+                    <div id="paymentFrequencyDisplay" style="padding: 10px; background: var(--surface-sunk); border-radius: 4px; min-height: 40px;"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1595,31 +999,31 @@ function getCustomFieldById($customFields, $fieldId) {
                 <h2 id="contactDetailsName" class="editable-name" title="Click to edit"></h2>
                 <div id="contactDetailsNameEdit" style="display: none;">
                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <input type="text" id="editFirstName" placeholder="First Name" style="flex: 1; padding: 8px; border: 1px solid #3498db; border-radius: 4px; font-size: 16px;">
-                        <input type="text" id="editLastName" placeholder="Last Name" style="flex: 1; padding: 8px; border: 1px solid #3498db; border-radius: 4px; font-size: 16px;">
+                        <input type="text" id="editFirstName" placeholder="First Name" style="flex: 1; padding: 8px; border: 1px solid var(--accent); border-radius: 4px; font-size: 16px;">
+                        <input type="text" id="editLastName" placeholder="Last Name" style="flex: 1; padding: 8px; border: 1px solid var(--accent); border-radius: 4px; font-size: 16px;">
                     </div>
-                    <small style="color: #7f8c8d;">Press Enter to save, Escape to cancel</small>
+                    <small style="color: var(--ink-faint);">Press Enter to save, Escape to cancel</small>
                 </div>
             </div>
             <div class="modal-body">
                 <div class="form-group">
                     <label>Email</label>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <div id="contactDetailsEmail" style="flex: 1; padding: 10px; background: #f8f9fa; border-radius: 4px; min-height: 20px;"></div>
+                        <div id="contactDetailsEmail" style="flex: 1; padding: 10px; background: var(--surface-sunk); border-radius: 4px; min-height: 20px;"></div>
                         <button class="btn-secondary" id="copyContactEmail" style="padding: 8px 12px; white-space: nowrap;">Copy</button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Phone</label>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <div id="contactDetailsPhone" style="flex: 1; padding: 10px; background: #f8f9fa; border-radius: 4px; min-height: 20px;"></div>
+                        <div id="contactDetailsPhone" style="flex: 1; padding: 10px; background: var(--surface-sunk); border-radius: 4px; min-height: 20px;"></div>
                         <button class="btn-secondary" id="copyContactPhone" style="padding: 8px 12px; white-space: nowrap;">Copy</button>
                     </div>
                 </div>
                 <div class="form-group" id="coachingFilesGroup">
                     <label>Coaching Files</label>
                     <div id="coachingFilesDisplay" style="display: flex; align-items: center; gap: 10px;">
-                        <div id="contactCoachingFiles" style="flex: 1; padding: 10px; background: #f8f9fa; border-radius: 4px; min-height: 20px; word-break: break-all;"></div>
+                        <div id="contactCoachingFiles" style="flex: 1; padding: 10px; background: var(--surface-sunk); border-radius: 4px; min-height: 20px; word-break: break-all;"></div>
                         <a id="openCoachingFiles" href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="padding: 8px 12px; white-space: nowrap; text-decoration: none; display: none;">Open</a>
                         <?php if ($user_can_edit): ?>
                         <button class="btn-secondary" id="editCoachingFilesBtn" style="padding: 8px 12px; white-space: nowrap;">Edit</button>
@@ -1627,7 +1031,7 @@ function getCustomFieldById($customFields, $fieldId) {
                     </div>
                     <?php if ($user_can_edit): ?>
                     <div id="coachingFilesEdit" style="display: none; margin-top: 10px;">
-                        <input type="text" id="coachingFilesInput" placeholder="https://drive.google.com/..." style="width: 100%; padding: 10px; border: 1px solid #3498db; border-radius: 4px; font-size: 14px;">
+                        <input type="text" id="coachingFilesInput" placeholder="https://drive.google.com/..." style="width: 100%; padding: 10px; border: 1px solid var(--accent); border-radius: 4px; font-size: 14px;">
                         <div style="margin-top: 8px; display: flex; gap: 8px;">
                             <button class="btn-primary" id="saveCoachingFiles" style="padding: 6px 12px; font-size: 13px;">Save</button>
                             <button class="btn-secondary" id="cancelCoachingFiles" style="padding: 6px 12px; font-size: 13px;">Cancel</button>
@@ -1637,7 +1041,7 @@ function getCustomFieldById($customFields, $fieldId) {
                 </div>
             </div>
             <div class="modal-footer" style="justify-content: space-between;">
-                <a id="contactDetailsKeapLink" href="#" target="_blank" rel="noopener noreferrer" style="padding: 10px 20px; background: #3498db; color: white; border-radius: 4px; font-size: 14px; font-weight: 600; text-decoration: none;">View in Keap</a>
+                <a id="contactDetailsKeapLink" href="#" target="_blank" rel="noopener noreferrer" style="padding: 10px 20px; background: var(--accent); color: white; border-radius: 4px; font-size: 14px; font-weight: 600; text-decoration: none;">View in Keap</a>
                 <button class="btn-secondary" id="closeContactDetailsModal">Close</button>
             </div>
         </div>
@@ -1960,7 +1364,7 @@ function getCustomFieldById($customFields, $fieldId) {
             if (hasNonEteam) {
                 const option = document.createElement('div');
                 option.className = 'filter-option';
-                option.innerHTML = '<input type="checkbox" id="eteam-none" value="" checked><label for="eteam-none" style="color:#999;">(Not on E Team)</label>';
+                option.innerHTML = '<input type="checkbox" id="eteam-none" value="" checked><label for="eteam-none" style="color:var(--ink-faint);">(Not on E Team)</label>';
                 option.querySelector('input').addEventListener('change', function() {
                     if (this.checked) { selectedEteam.add(''); } else { selectedEteam.delete(''); }
                     applyEteamFilter();
@@ -2244,6 +1648,13 @@ function getCustomFieldById($customFields, $fieldId) {
 
         let selectedContacts = new Set();
 
+        // Presentational only: mirror a checkbox's state onto its row so the
+        // selection tint (see .row-selected) never relies on color alone.
+        function syncRowTint(cb) {
+            const r = cb.closest('tr');
+            if (r) r.classList.toggle('row-selected', cb.checked);
+        }
+
         // Update bulk actions bar
         function updateBulkActions() {
             const count = selectedContacts.size;
@@ -2265,6 +1676,7 @@ function getCustomFieldById($customFields, $fieldId) {
 
             visibleCheckboxes.forEach(cb => {
                 cb.checked = this.checked;
+                syncRowTint(cb);
                 const contactId = cb.value;
                 if (this.checked) {
                     selectedContacts.add(contactId);
@@ -2280,6 +1692,7 @@ function getCustomFieldById($customFields, $fieldId) {
         rowCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', function() {
                 const contactId = this.value;
+                syncRowTint(this);
                 if (this.checked) {
                     selectedContacts.add(contactId);
                 } else {
@@ -2314,7 +1727,7 @@ function getCustomFieldById($customFields, $fieldId) {
         // Cancel bulk actions
         bulkActionsCancel.addEventListener('click', function() {
             // Uncheck all checkboxes
-            rowCheckboxes.forEach(cb => cb.checked = false);
+            rowCheckboxes.forEach(cb => { cb.checked = false; syncRowTint(cb); });
             selectAllCheckbox.checked = false;
             selectedContacts.clear();
             updateBulkActions();
@@ -2454,7 +1867,7 @@ function getCustomFieldById($customFields, $fieldId) {
                     }
 
                     // Clear checkboxes
-                    rowCheckboxes.forEach(cb => cb.checked = false);
+                    rowCheckboxes.forEach(cb => { cb.checked = false; syncRowTint(cb); });
                     selectAllCheckbox.checked = false;
                     selectedContacts.clear();
                     updateBulkActions();
@@ -2512,7 +1925,7 @@ function getCustomFieldById($customFields, $fieldId) {
                 const data = await response.json();
 
                 if (!data.success) {
-                    resultDiv.innerHTML = '<span style="color:#dc3545;">Error: ' + (data.error || 'Unknown error') + '</span>';
+                    resultDiv.innerHTML = '<span style="color:var(--danger);">Error: ' + (data.error || 'Unknown error') + '</span>';
                     resultDiv.style.display = 'block';
                     return;
                 }
@@ -2544,14 +1957,14 @@ function getCustomFieldById($customFields, $fieldId) {
                 }
 
                 if (added > 0) {
-                    resultDiv.innerHTML = '<span style="color:#28a745;">Added ' + added + ' new team(s): ' + data.new_teams.join(', ') + '</span>';
+                    resultDiv.innerHTML = '<span style="color:var(--ok);">Added ' + added + ' new team(s): ' + data.new_teams.join(', ') + '</span>';
                 } else {
-                    resultDiv.innerHTML = '<span style="color:#666;">All teams already in sync (' + data.keap_teams.length + ' found in Keap)</span>';
+                    resultDiv.innerHTML = '<span style="color:var(--ink-soft);">All teams already in sync (' + data.keap_teams.length + ' found in Keap)</span>';
                 }
                 resultDiv.style.display = 'block';
 
             } catch (error) {
-                resultDiv.innerHTML = '<span style="color:#dc3545;">Failed to sync teams</span>';
+                resultDiv.innerHTML = '<span style="color:var(--danger);">Failed to sync teams</span>';
                 resultDiv.style.display = 'block';
             } finally {
                 btn.disabled = false;
@@ -2622,7 +2035,7 @@ function getCustomFieldById($customFields, $fieldId) {
                     alert(msg);
                     dropConfirmModal.classList.remove('show');
                     changeCohortModal.classList.remove('show');
-                    rowCheckboxes.forEach(cb => cb.checked = false);
+                    rowCheckboxes.forEach(cb => { cb.checked = false; syncRowTint(cb); });
                     selectAllCheckbox.checked = false;
                     selectedContacts.clear();
                     updateBulkActions();
@@ -2656,7 +2069,7 @@ function getCustomFieldById($customFields, $fieldId) {
 
                     dropConfirmModal.classList.remove('show');
                     changeCohortModal.classList.remove('show');
-                    rowCheckboxes.forEach(cb => cb.checked = false);
+                    rowCheckboxes.forEach(cb => { cb.checked = false; syncRowTint(cb); });
                     selectAllCheckbox.checked = false;
                     selectedContacts.clear();
                     updateBulkActions();
@@ -2741,7 +2154,7 @@ function getCustomFieldById($customFields, $fieldId) {
 
                     // Close modal and clear selection
                     changeCohortModal.classList.remove('show');
-                    rowCheckboxes.forEach(cb => cb.checked = false);
+                    rowCheckboxes.forEach(cb => { cb.checked = false; syncRowTint(cb); });
                     selectAllCheckbox.checked = false;
                     selectedContacts.clear();
                     updateBulkActions();
@@ -2897,7 +2310,7 @@ function getCustomFieldById($customFields, $fieldId) {
 
                     // Close modal and clear selection
                     changeCoachModal.classList.remove('show');
-                    rowCheckboxes.forEach(cb => cb.checked = false);
+                    rowCheckboxes.forEach(cb => { cb.checked = false; syncRowTint(cb); });
                     selectAllCheckbox.checked = false;
                     selectedContacts.clear();
                     updateBulkActions();
@@ -3362,5 +2775,6 @@ function getCustomFieldById($customFields, $fieldId) {
             observer.observe(bulkEmailModalEl, { attributes: true });
         }
     </script>
+    <?php roster_ui_menu_js(); ?>
 </body>
 </html>

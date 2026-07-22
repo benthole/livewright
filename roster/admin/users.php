@@ -6,6 +6,7 @@
  */
 
 require_once('../includes/auth.php');
+require_once(__DIR__ . '/../includes/ui.php');
 
 // Require admin access
 require_auth();
@@ -105,78 +106,58 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Management - LiveWright Roster</title>
+    <?php roster_ui_styles(); ?>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-            background: #f5f5f5;
-            padding: 20px;
-        }
-
         .container {
             max-width: 1200px;
-            margin: 0 auto;
+            margin: 24px auto;
+            padding: 0 20px 40px;
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            color: #2c3e50;
-            font-size: 28px;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 10px;
-        }
-
+        /* buttons — align local classes to the shared token palette */
         .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 9px 16px;
+            border: 1px solid transparent;
+            border-radius: var(--r-sm);
+            font-family: inherit;
             font-size: 14px;
             font-weight: 600;
+            line-height: 1;
             cursor: pointer;
             text-decoration: none;
-            display: inline-block;
-            transition: background 0.2s;
+            transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
         }
 
         .btn-primary {
-            background: #3498db;
-            color: white;
+            background: var(--accent);
+            color: oklch(0.99 0.003 85);
         }
 
         .btn-primary:hover {
-            background: #2980b9;
+            background: var(--accent-hover);
         }
 
         .btn-secondary {
-            background: #ecf0f1;
-            color: #2c3e50;
+            background: var(--surface);
+            color: var(--ink);
+            border-color: var(--line-strong);
         }
 
         .btn-secondary:hover {
-            background: #d5dbdb;
+            background: var(--surface-sunk);
         }
 
         .btn-danger {
-            background: #e74c3c;
-            color: white;
+            background: var(--danger);
+            color: oklch(0.99 0.003 85);
         }
 
         .btn-danger:hover {
-            background: #c0392b;
+            background: var(--danger-hover);
         }
 
         .btn-small {
@@ -185,20 +166,22 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         }
 
         .card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--r-md);
+            box-shadow: var(--shadow-sm);
             margin-bottom: 20px;
         }
 
         .card-header {
             padding: 20px;
-            border-bottom: 1px solid #ecf0f1;
+            border-bottom: 1px solid var(--line);
         }
 
         .card-header h2 {
-            color: #2c3e50;
-            font-size: 18px;
+            color: var(--ink);
+            font-size: 16px;
+            font-weight: 600;
         }
 
         .card-body {
@@ -207,21 +190,21 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
 
         .alert {
             padding: 12px 15px;
-            border-radius: 6px;
+            border-radius: var(--r-sm);
             margin-bottom: 20px;
             font-size: 14px;
         }
 
         .alert-error {
-            background: #fdeaea;
-            color: #c0392b;
-            border: 1px solid #f5c6cb;
+            background: var(--danger-bg);
+            color: var(--danger-ink);
+            border: 1px solid var(--danger);
         }
 
         .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: var(--ok-bg);
+            color: var(--ok);
+            border: 1px solid var(--ok);
         }
 
         .form-row {
@@ -240,23 +223,29 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             margin-bottom: 6px;
             font-size: 14px;
             font-weight: 600;
-            color: #2c3e50;
+            color: var(--ink);
         }
 
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 10px 12px;
-            border: 2px solid #ecf0f1;
-            border-radius: 6px;
+            padding: 9px 12px;
+            border: 1px solid var(--line-strong);
+            border-radius: var(--r-sm);
+            background: var(--surface);
+            color: var(--ink);
+            font-family: inherit;
             font-size: 14px;
-            transition: border-color 0.2s;
+            transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
         }
+
+        .form-group input::placeholder { color: var(--ink-faint); }
 
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #3498db;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgb(from var(--focus) r g b / 0.20);
         }
 
         .form-group .checkbox-label {
@@ -276,60 +265,66 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         }
 
         th, td {
-            padding: 12px 15px;
+            padding: 11px 16px;
             text-align: left;
-            border-bottom: 1px solid #ecf0f1;
+            border-bottom: 1px solid var(--line);
         }
 
         th {
-            background: #f8f9fa;
+            background: var(--surface-sunk);
             font-weight: 600;
-            color: #2c3e50;
-            font-size: 13px;
+            color: var(--ink-soft);
+            font-size: 11.5px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.04em;
+            border-bottom: 1px solid var(--line-strong);
         }
 
         td {
             font-size: 14px;
-            color: #2c3e50;
+            color: var(--ink);
+            font-variant-numeric: tabular-nums;
         }
 
-        tr:hover {
-            background: #f8f9fa;
+        tbody tr:nth-child(even) {
+            background: var(--surface-sunk);
+        }
+
+        tbody tr:hover {
+            background: var(--accent-weak);
         }
 
         .badge {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
+            padding: 3px 9px;
+            border-radius: var(--r-sm);
             font-size: 12px;
             font-weight: 600;
         }
 
         .badge-viewer {
-            background: #ecf0f1;
-            color: #7f8c8d;
+            background: var(--tag-neutral-bg);
+            color: var(--ink-soft);
         }
 
         .badge-editor {
-            background: #d4edda;
-            color: #155724;
+            background: var(--tag-group-bg);
+            color: var(--tag-group-ink);
         }
 
         .badge-admin {
-            background: #cce5ff;
-            color: #004085;
+            background: var(--accent-weak);
+            color: var(--accent-ink);
         }
 
         .badge-active {
-            background: #d4edda;
-            color: #155724;
+            background: var(--ok-bg);
+            color: var(--ok);
         }
 
         .badge-inactive {
-            background: #f8d7da;
-            color: #721c24;
+            background: var(--tag-neutral-bg);
+            color: var(--ink-faint);
         }
 
         .actions {
@@ -343,7 +338,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgb(from var(--ink) r g b / 0.45);
             display: none;
             align-items: center;
             justify-content: center;
@@ -355,16 +350,19 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         }
 
         .modal {
-            background: white;
-            border-radius: 8px;
-            padding: 25px;
+            background: var(--surface);
+            border-radius: var(--r-md);
+            box-shadow: var(--shadow-md);
+            padding: 28px;
             max-width: 450px;
             width: 90%;
         }
 
         .modal h3 {
             margin-bottom: 15px;
-            color: #2c3e50;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--ink);
         }
 
         .modal-actions {
@@ -376,20 +374,13 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
 
         .user-info {
             font-size: 12px;
-            color: #7f8c8d;
+            color: var(--ink-faint);
         }
     </style>
 </head>
-<body>
+<body class="rui">
+    <?php roster_ui_topbar(['base' => '../', 'active' => 'users', 'page_title' => 'Manage Users', 'user' => $current_user, 'is_admin' => true]); ?>
     <div class="container">
-        <div class="header">
-            <h1>User Management</h1>
-            <div class="header-actions">
-                <a href="../" class="btn btn-secondary">Back to Roster</a>
-                <a href="../logout.php" class="btn btn-secondary">Logout</a>
-            </div>
-        </div>
-
         <?php if ($message): ?>
         <div class="alert alert-<?php echo $messageType; ?>"><?php echo htmlspecialchars($message); ?></div>
         <?php endif; ?>
@@ -596,5 +587,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             });
         });
     </script>
+    <?php roster_ui_menu_js(); ?>
 </body>
 </html>
