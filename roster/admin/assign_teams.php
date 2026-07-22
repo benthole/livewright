@@ -19,6 +19,7 @@
  */
 
 require_once(__DIR__ . '/../includes/auth.php');
+require_once(__DIR__ . '/../includes/ui.php');
 require_once(__DIR__ . '/../config.php');
 require_once(__DIR__ . '/../keap_api.php');
 
@@ -27,6 +28,7 @@ if (!is_admin()) {
     header('Location: ../');
     exit;
 }
+$current_user = get_logged_in_user();
 
 // Roster sync tag: contacts must carry this to appear on the roster.
 $roster_sync_tag_id = 525;
@@ -373,47 +375,58 @@ $current_user = get_logged_in_user();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bulk Team Assignment</title>
+    <?php roster_ui_styles(); ?>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #f4f6f8; color: #2d3748; }
-        .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
-        h1 { font-size: 22px; margin: 0 0 4px; }
-        .sub { color: #718096; font-size: 14px; margin-bottom: 20px; }
-        a.back { color: #17a2b8; text-decoration: none; font-size: 14px; }
-        .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
-        .col label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
-        textarea { width: 100%; min-height: 220px; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; font-family: ui-monospace, Menlo, monospace; resize: vertical; }
-        .btn { padding: 10px 18px; border: 0; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
-        .btn-primary { background: #17a2b8; color: #fff; }
-        .btn-apply { background: #2f855a; color: #fff; }
+        /* Bulk Team Assignment — page-specific (tokens/base/topbar in includes/ui.php) */
+        .wrap { max-width: 1100px; margin: 0 auto; padding: 8px 24px 48px; }
+        .tool-intro { margin: 22px 0 20px; }
+        .tool-intro h2 { font-size: 17px; font-weight: 600; margin: 0 0 4px; color: var(--ink); }
+        .sub { color: var(--ink-soft); font-size: 14px; max-width: 70ch; }
+        .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+        .col label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: var(--ink); }
+        textarea { width: 100%; min-height: 220px; padding: 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); font-size: 13px; font-family: ui-monospace, Menlo, monospace; resize: vertical; background: var(--surface); color: var(--ink); }
+        textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgb(from var(--focus) r g b / 0.20); }
+        .btn { padding: 10px 18px; border: 1px solid transparent; border-radius: var(--r-sm); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background var(--dur) var(--ease); }
+        .btn-primary { background: var(--accent); color: oklch(0.99 0.003 85); }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-apply { background: var(--ok); color: oklch(0.99 0.003 85); }
+        .btn-apply:hover { background: oklch(0.46 0.09 150); }
         .btn:disabled { opacity: .5; cursor: not-allowed; }
         .bar { margin: 18px 0; display: flex; gap: 10px; align-items: center; }
-        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; margin-top: 12px; font-size: 13px; }
-        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #edf2f7; }
-        th { background: #f7fafc; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: #718096; }
-        tr.st-local  { background: #f0fff4; }
-        tr.st-keap   { background: #fffff0; }
-        tr.st-ambiguous, tr.st-not_found { background: #fff5f5; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
-        .b-local  { background: #c6f6d5; color: #22543d; }
-        .b-keap   { background: #fefcbf; color: #744210; }
-        .b-red    { background: #fed7d7; color: #822727; }
-        .override { width: 190px; padding: 5px; border: 1px solid #fc8181; border-radius: 4px; font-size: 12px; }
-        .notice { padding: 12px 14px; border-radius: 6px; margin: 12px 0; font-size: 14px; }
-        .notice-info { background: #ebf8ff; color: #2c5282; }
-        .notice-warn { background: #fffaf0; color: #744210; }
-        .notice-ok { background: #f0fff4; color: #22543d; }
-        .muted { color: #a0aec0; }
-        code { background: #edf2f7; padding: 1px 5px; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; margin-top: 12px; font-size: 13px; }
+        th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+        th { background: var(--surface-sunk); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); font-weight: 600; }
+        tr.st-local  { background: var(--ok-bg); }
+        tr.st-keap   { background: var(--warn-bg); }
+        tr.st-ambiguous, tr.st-not_found { background: var(--danger-bg); }
+        .badge { display: inline-block; padding: 3px 9px; border-radius: var(--r-sm); font-size: 11px; font-weight: 700; }
+        .b-local  { background: var(--tag-group-bg); color: var(--tag-group-ink); }
+        .b-keap   { background: var(--warn-bg); color: var(--warn-ink); }
+        .b-red    { background: var(--danger-bg); color: var(--danger-ink); }
+        .override { width: 190px; padding: 6px 8px; border: 1px solid var(--danger); border-radius: var(--r-sm); font-size: 12px; background: var(--surface); color: var(--ink); }
+        .notice { padding: 12px 14px; border-radius: var(--r-sm); margin: 12px 0; font-size: 14px; }
+        .notice-info { background: var(--accent-weak); color: var(--accent-ink); }
+        .notice-warn { background: var(--warn-bg); color: var(--warn-ink); }
+        .notice-ok { background: var(--ok-bg); color: var(--ok); }
+        .muted { color: var(--ink-faint); }
+        code { background: var(--surface-sunk); padding: 1px 5px; border-radius: 4px; font-size: 0.92em; }
     </style>
 </head>
-<body>
+<body class="rui">
+<?php roster_ui_topbar([
+    'base' => '../',
+    'active' => 'assign_teams',
+    'page_title' => 'Assign Teams',
+    'user' => $current_user,
+    'is_admin' => true,
+]); ?>
 <div class="wrap">
-    <a class="back" href="../">&larr; Back to roster</a>
-    <h1>Bulk Team Assignment</h1>
-    <div class="sub">
-        Assign people to teams (Keap field 45) and tag them for the roster sync (tag <?php echo (int)$roster_sync_tag_id; ?>)
-        in one reviewed pass. One name per line under each team. Nothing is written until you review the matches and click Apply.
+    <div class="tool-intro">
+        <h2>Bulk Team Assignment</h2>
+        <div class="sub">
+            Assign people to teams (Keap field 45) and tag them for the roster sync (tag <?php echo (int)$roster_sync_tag_id; ?>)
+            in one reviewed pass. One name per line under each team. Nothing is written until you review the matches and click Apply.
+        </div>
     </div>
 
     <div class="notice notice-info">
@@ -586,5 +599,6 @@ function renderResult(data) {
     document.getElementById('applyBar').style.display = 'none';
 }
 </script>
+<?php roster_ui_menu_js(); ?>
 </body>
 </html>

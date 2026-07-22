@@ -9,6 +9,7 @@
  */
 
 require_once(__DIR__ . '/../includes/auth.php');
+require_once(__DIR__ . '/../includes/ui.php');
 require_once(__DIR__ . '/../config.php');
 require_once(__DIR__ . '/../keap_api.php');
 require_once(__DIR__ . '/../lib/field_config.php');
@@ -18,6 +19,7 @@ if (!is_admin()) {
     header('Location: ../');
     exit;
 }
+$current_user = get_logged_in_user();
 
 $conn = new PDO("mysql:host=$db_host_lw;dbname=$db_name_lw;charset=utf8mb4", $db_user_lw, $db_pass_lw);
 $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -78,53 +80,45 @@ $activeTab = $_POST['field_key'] ?? array_key_first($defs);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Field Organizer — Roster Admin</title>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <?php roster_ui_styles(); ?>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #f4f6f8; color: #1a2733; }
-        .topbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
-        .topbar h1 { font-size: 18px; margin: 0; }
-        .topbar a { color: #17a2b8; text-decoration: none; font-size: 14px; }
         .wrap { max-width: 1100px; margin: 24px auto; padding: 0 24px; }
-        .intro { color: #5a6b7b; font-size: 14px; margin-bottom: 18px; }
+        .tool-intro { color: var(--ink-soft); font-size: 14px; margin: 20px 0 18px; max-width: 65ch; }
+        .tool-intro em { color: var(--ink); font-style: normal; font-weight: 600; }
         .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
-        .tab { padding: 9px 16px; border: 1px solid #cbd5e0; background: #fff; border-radius: 6px; cursor: pointer; font-size: 14px; }
-        .tab.active { background: #17a2b8; color: #fff; border-color: #17a2b8; }
+        .tab { padding: 9px 16px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: var(--r-sm); cursor: pointer; font-size: 14px; font-weight: 500; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease); }
+        .tab:hover { background: var(--surface-sunk); }
+        .tab.active { background: var(--accent); color: oklch(0.99 0.003 85); border-color: var(--accent); }
         .panel { display: none; }
         .panel.active { display: block; }
         .groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .group { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; min-height: 120px; }
+        .group { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px; min-height: 120px; box-shadow: var(--shadow-sm); }
         .group-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-        .group h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #6b7a89; }
-        .add-divider { border: 1px dashed #cbd5e0; background: #fff; color: #718096; border-radius: 5px; font-size: 12px; padding: 3px 8px; cursor: pointer; }
-        .add-divider:hover { border-color: #17a2b8; color: #17a2b8; }
-        .divider-item { background: #eef2f6; color: #94a3b8; font-size: 12px; letter-spacing: .1em; justify-content: space-between; }
-        .divider-item .val { text-align: center; color: #94a3b8; }
-        .remove-divider { border: none; background: transparent; color: #a0aec0; font-size: 16px; line-height: 1; cursor: pointer; padding: 0 4px; }
-        .remove-divider:hover { color: #dc3545; }
+        .group h3 { margin: 0; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); }
+        .add-divider { border: 1px dashed var(--line-strong); background: var(--surface); color: var(--ink-faint); border-radius: var(--r-sm); font-size: 12px; padding: 3px 8px; cursor: pointer; transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease); }
+        .add-divider:hover { border-color: var(--accent); color: var(--accent-ink); }
+        .divider-item { background: var(--surface-sunk); color: var(--ink-faint); font-size: 12px; letter-spacing: .1em; justify-content: space-between; }
+        .divider-item .val { text-align: center; color: var(--ink-faint); }
+        .remove-divider { border: none; background: transparent; color: var(--ink-faint); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 4px; transition: color var(--dur) var(--ease); }
+        .remove-divider:hover { color: var(--danger); }
         .list { min-height: 60px; display: flex; flex-direction: column; gap: 6px; }
-        .item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; cursor: grab; }
+        .item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--surface-sunk); border: 1px solid var(--line); border-radius: var(--r-sm); font-size: 14px; cursor: grab; }
         .item.hidden-val { opacity: .5; }
-        .item .handle { color: #a0aec0; cursor: grab; }
+        .item .handle { color: var(--ink-faint); cursor: grab; }
         .item .val { flex: 1; word-break: break-word; }
-        .item label { font-size: 12px; color: #718096; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
+        .item label { font-size: 12px; color: var(--ink-soft); display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
         .sortable-ghost { opacity: .4; }
         .actions { margin-top: 18px; display: flex; gap: 12px; align-items: center; }
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
-        .btn-primary { background: #17a2b8; color: #fff; }
-        .msg { padding: 12px 16px; border-radius: 6px; margin-bottom: 18px; font-size: 14px; }
-        .msg.success { background: #e6f7ed; color: #1a7f4b; border: 1px solid #b7e4c7; }
-        .msg.error { background: #fdecea; color: #a12a1c; border: 1px solid #f5b7ae; }
-        .empty-hint { color: #a0aec0; font-size: 13px; font-style: italic; padding: 8px; }
+        .msg { padding: 12px 16px; border-radius: var(--r-sm); margin-bottom: 18px; font-size: 14px; }
+        .msg.success { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); }
+        .msg.error { background: var(--danger-bg); color: var(--danger-ink); border: 1px solid var(--danger); }
+        .empty-hint { color: var(--ink-faint); font-size: 13px; font-style: italic; padding: 8px; }
     </style>
 </head>
-<body>
-    <div class="topbar">
-        <h1>Field Organizer</h1>
-        <a href="../">&larr; Back to roster</a>
-        <a href="users.php">User management</a>
-    </div>
+<body class="rui">
+    <?php roster_ui_topbar(['base' => '../', 'active' => 'organize_fields', 'page_title' => 'Organize Fields', 'user' => $current_user, 'is_admin' => true]); ?>
     <div class="wrap">
-        <p class="intro">
+        <p class="tool-intro">
             Organize how Keap values appear in the roster dropdowns. Drag values between
             groups to regroup them, drag within a group to reorder, and use <em>Hide</em>
             to keep a value out of the dropdown. Values are pulled live from Keap, so new
@@ -181,7 +175,7 @@ $activeTab = $_POST['field_key'] ?? array_key_first($defs);
                     </div>
 
                     <div class="actions">
-                        <button type="submit" class="btn btn-primary">Save <?php echo htmlspecialchars($def['label']); ?></button>
+                        <button type="submit" class="rui-btn rui-btn--primary">Save <?php echo htmlspecialchars($def['label']); ?></button>
                     </div>
                 </form>
             </div>
@@ -253,5 +247,6 @@ $activeTab = $_POST['field_key'] ?? array_key_first($defs);
             });
         });
     </script>
+    <?php roster_ui_menu_js(); ?>
 </body>
 </html>
