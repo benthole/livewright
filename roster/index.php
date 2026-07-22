@@ -30,6 +30,11 @@ try {
 // automatically when nothing is organized yet. See lib/field_config.php and
 // admin/organize_fields.php. Guarded so any organizer/DB failure degrades to
 // config-based rendering instead of breaking the roster page.
+// Quarter column is optional: active only once its Keap field id is configured
+// in config.php (server-only). Fully dormant otherwise.
+$quarterEnabled = isset($quarter_field_id) && (int)$quarter_field_id > 0;
+$quarterGroups = [];
+
 try {
     $cohortGroups = fc_dropdown_groups($conn, 'cohort');       // [groupLabel => [team, ...]]
     $individualCoachValues = [];
@@ -40,6 +45,9 @@ try {
     foreach (fc_dropdown_groups($conn, 'group_coach') as $vals) {
         $groupCoachValues = array_merge($groupCoachValues, $vals);
     }
+    if ($quarterEnabled) {
+        $quarterGroups = fc_dropdown_groups($conn, 'quarter'); // [groupLabel => [Q1, ...]]
+    }
 } catch (Exception $e) {
     error_log('Field organizer fallback (index): ' . $e->getMessage());
     $cohortGroups = [
@@ -49,6 +57,9 @@ try {
     ];
     $individualCoachValues = $individual_coaches ?? [];
     $groupCoachValues = $group_coaches ?? [];
+    if ($quarterEnabled) {
+        $quarterGroups = ['Active' => ['Q1', 'Q2', 'Q3', 'Q4']];
+    }
 }
 
 // Fetch all roster entries
@@ -1152,6 +1163,13 @@ function getCustomFieldById($customFields, $fieldId) {
                             <span class="sort-indicator"></span>
                             <div class="filter-dropdown" id="cohortFilter"></div>
                         </th>
+                        <?php if ($quarterEnabled): ?>
+                        <th class="sortable filterable" data-column="quarter">
+                            Quarter
+                            <span class="sort-indicator"></span>
+                            <div class="filter-dropdown" id="quarterFilter"></div>
+                        </th>
+                        <?php endif; ?>
                         <th class="sortable filterable" data-column="eteam">
                             E Team
                             <span class="sort-indicator"></span>
@@ -1188,6 +1206,9 @@ function getCustomFieldById($customFields, $fieldId) {
 
                         // Get cohort (custom field ID 45)
                         $cohort = getCustomFieldById($customFields, 45);
+
+                        // Get quarter (optional custom field; empty when not configured)
+                        $quarter = $quarterEnabled ? getCustomFieldById($customFields, $quarter_field_id) : '';
 
                         // Get CARE profile (uses IDs 19, 21, 23, 25)
                         $careProfileData = getCareProfile($customFields);
@@ -1231,6 +1252,7 @@ function getCustomFieldById($customFields, $fieldId) {
                     <tr data-firstname="<?php echo htmlspecialchars($firstName); ?>"
                         data-lastname="<?php echo htmlspecialchars($lastName); ?>"
                         data-cohort="<?php echo htmlspecialchars($cohort); ?>"
+                        data-quarter="<?php echo htmlspecialchars($quarter); ?>"
                         data-coach-individual="<?php echo htmlspecialchars($coachIndividualRaw); ?>"
                         data-coach-group="<?php echo htmlspecialchars($coachGroup); ?>"
                         data-contact-id="<?php echo htmlspecialchars($data['id'] ?? ''); ?>"
@@ -1276,6 +1298,9 @@ function getCustomFieldById($customFields, $fieldId) {
                             <?php endif; ?>
                         </td>
                         <td><?php echo htmlspecialchars($cohort); ?></td>
+                        <?php if ($quarterEnabled): ?>
+                        <td><?php echo htmlspecialchars($quarter); ?></td>
+                        <?php endif; ?>
                         <td>
                             <?php if ($isEteam): ?>
                                 <span style="background:#7c3aed;color:white;padding:2px 8px;border-radius:10px;font-size:0.8em;font-weight:600;"><?php echo htmlspecialchars($eteamRole); ?></span>
@@ -1731,6 +1756,8 @@ function getCustomFieldById($customFields, $fieldId) {
         const cohortHeader = document.querySelector('th.filterable[data-column="cohort"]');
         const cohortFilterDropdown = document.getElementById('cohortFilter');
         let selectedCohorts = new Set();
+        // Quarter filter state (stays empty -> no effect when the column is disabled).
+        let selectedQuarters = new Set();
 
         // Build filter options
         function buildCohortFilter() {
@@ -1836,6 +1863,66 @@ function getCustomFieldById($customFields, $fieldId) {
 
         // Initialize cohort filter
         buildCohortFilter();
+
+        // Quarter filter functionality (only when the Quarter column is present)
+        const quarterHeader = document.querySelector('th.filterable[data-column="quarter"]');
+        const quarterFilterDropdown = document.getElementById('quarterFilter');
+        if (quarterHeader && quarterFilterDropdown) {
+            function buildQuarterFilter() {
+                const quarters = new Set();
+                tableRows.forEach(row => {
+                    const q = row.getAttribute('data-quarter');
+                    if (q) quarters.add(q);
+                });
+
+                quarterFilterDropdown.innerHTML = '';
+                const actions = document.createElement('div');
+                actions.className = 'filter-actions';
+                actions.innerHTML = '<a id="quarterUncheckAll">Uncheck all</a>';
+                quarterFilterDropdown.appendChild(actions);
+                actions.querySelector('#quarterUncheckAll').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    quarterFilterDropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+                    selectedQuarters.clear();
+                    applyCoachesFilter();
+                });
+
+                Array.from(quarters).sort().forEach(q => {
+                    const option = document.createElement('div');
+                    option.className = 'filter-option';
+                    option.innerHTML = `
+                        <input type="checkbox" id="quarter-${q}" value="${q}" checked>
+                        <label for="quarter-${q}">${q}</label>
+                    `;
+                    option.querySelector('input').addEventListener('change', function() {
+                        if (this.checked) { selectedQuarters.add(q); } else { selectedQuarters.delete(q); }
+                        applyCoachesFilter();
+                    });
+                    quarterFilterDropdown.appendChild(option);
+                    selectedQuarters.add(q);
+                });
+            }
+
+            quarterHeader.addEventListener('click', function(e) {
+                e.stopPropagation();
+                quarterFilterDropdown.classList.toggle('show');
+            });
+            document.addEventListener('click', function(e) {
+                if (!quarterHeader.contains(e.target)) {
+                    if (selectedQuarters.size === 0) {
+                        quarterFilterDropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                            cb.checked = true;
+                            selectedQuarters.add(cb.value);
+                        });
+                        applyCoachesFilter();
+                    }
+                    quarterFilterDropdown.classList.remove('show');
+                }
+            });
+
+            buildQuarterFilter();
+        }
 
         // E Team filter functionality
         const eteamHeader = document.querySelector('th.filterable[data-column="eteam"]');
@@ -2026,6 +2113,10 @@ function getCustomFieldById($customFields, $fieldId) {
                 const cohort = row.getAttribute('data-cohort');
                 const matchesCohort = selectedCohorts.size === 0 || selectedCohorts.has(cohort);
 
+                // Check if row matches quarter filter (no-op when nothing selected)
+                const quarter = row.getAttribute('data-quarter') || '';
+                const matchesQuarter = selectedQuarters.size === 0 || selectedQuarters.has(quarter);
+
                 // Parse comma-separated individual coaches
                 const individualCoaches = coachIndividualRaw ? coachIndividualRaw.split(',').map(c => c.trim()).filter(c => c) : [];
 
@@ -2052,7 +2143,7 @@ function getCustomFieldById($customFields, $fieldId) {
                 }
 
                 // Show row only if it matches all filters
-                if (matchesSearch && matchesCohort && matchesCoach) {
+                if (matchesSearch && matchesCohort && matchesCoach && matchesQuarter) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
@@ -2112,6 +2203,14 @@ function getCustomFieldById($customFields, $fieldId) {
                 const key = cb.value;
                 selectedCoaches.add(key);
             });
+
+            // Reset quarter filter - check all (if present)
+            if (quarterFilterDropdown) {
+                quarterFilterDropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.checked = true;
+                    selectedQuarters.add(cb.value);
+                });
+            }
 
             // Clear sort indicators
             document.querySelectorAll('.sort-indicator').forEach(ind => ind.textContent = '');
